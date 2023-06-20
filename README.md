@@ -4,4 +4,14 @@ Original version and citation:
 
 [Garcia-Tenorio, C.; Vande Wouwer, A. A Matlab Toolbox for Extended Dynamic Mode Decomposition Based on Orthogonal Polynomials and p-q Quasi-Norm Order Reduction. Mathematics 2022, 10, 3859. https://doi.org/10.3390/math10203859](https://www.mdpi.com/2227-7390/10/20/3859)
 
-## Install
+## Installation 
+
+Add all the files to your Matlab path
+
+## Minimal Working Example
+
+In the *samples* directory there is a script that runs the code with the three different parametrisations of the duffing equation. 
+
+It uses the helper class *Orbits*, for the numerical integration of the system, and generating the structures that feed the *pqEDMD* class.
+
+
