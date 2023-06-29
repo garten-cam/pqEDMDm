@@ -29,10 +29,12 @@ classdef pqEDMD
         % overhead to the class because it just keeps a copy of the
         % class arguments. The same happens with the other inputs.
         % This information should be stored in the VVFO object.
-        system struct {systemStructureCheck(system)} = struct('Time', cell(1,1), 'SV', cell(1,1))
+        %%%%%%% Removed System from properties
+        % system struct {systemStructureCheck(system)} = struct('Time', cell(1,1), 'SV', cell(1,1))
+        %%%%%%%
         p (1,:) {mustBePositive, mustBeInteger, mustBeLessThanOrEqual(p,10)} = 3
         q (1,:) {mustBePositive} = 1.2
-        tr_ts struct {tr_ts_check(tr_ts)} = struct('tr_index', 1, 'ts_index', 2)
+        % [User fits whatever they want to fit] tr_ts struct {tr_ts_check(tr_ts)} = struct('tr_index', 1, 'ts_index', 2)
         polynomial (1,:) char {mustBeMember(polynomial,...
             {'Hermite',...
             'Legendre',...
@@ -42,16 +44,13 @@ classdef pqEDMD
             'Gegenbauer',...
             'Jacobi'})} = 'Legendre'
         polyParam (1,:) {mustBePositive, mustBeInteger} = [1 1]
-        normalization = false
+        % [Also responsibility of the user] normalization = false
         method (1,:) char {mustBeMember(method,{'OLS',... Ordinary Least Squares
-            'ML',... Maximum Likelihood
-            'RLS',... Regularized Least squares (In development)
-            'NCA'... Neighborhood Component analysis (In development)
-            })} = 'OLS'
+            '',... Normal Decomposition
+            'maxLike' ... Maximum lilekihood decomposition
+            })} = ''
     end
     properties % Calculated properties that help in the calculation
-        % VVFOs % Array of observables
-        pqEDMD_array % Array of solutions
         best_pqEDMD % Best solution
     end
     properties (Dependent, Hidden) % Hidden because it is only on demand
@@ -62,80 +61,64 @@ classdef pqEDMD
             if nargin > 0
                 % name-value attributes for constructor
                 in = inputParser;
-                addRequired(in,'system');
+                % addRequired(in,'system');
                 addOptional(in, 'p', obj.p);
                 addOptional(in, 'q', obj.q);
-                addOptional(in, 'tr_ts', obj.tr_ts);
                 addOptional(in, 'polynomial', obj.polynomial);
                 addOptional(in, 'polyParam', obj.polyParam);
-                addOptional(in, 'normalization', obj.normalization);
                 addOptional(in, 'method', obj.method);
 
                 parse(in, system, varargin{:});
 
-                obj.system = in.Results.system;
+                % obj.system = in.Results.system;
                 obj.p = in.Results.p;
                 obj.q = in.Results.q;
-                obj.tr_ts = in.Results.tr_ts;
+                % obj.tr_ts = in.Results.tr_ts;
                 obj.polynomial = in.Results.polynomial;
                 obj.polyParam = in.Results.polyParam;
-                obj.normalization = in.Results.normalization;
+                % obj.normalization = in.Results.normalization;
                 obj.method = in.Results.method;
 
                 % For the real thing, after dealing with the inputs...
                 % check for polynomial parameters
                 polycheck(obj.polynomial,obj.polyParam);
-                % generate the array of observables.
-                % obj.VVFOs = getVVFOs(obj); % I do not need to save this value
-                % Perform the first calculation
-                obj.pqEDMD_array = get_pqEDMD_array(obj);
-                obj.best_pqEDMD = get_best_pqEDMD(obj);
+                % Use a fit function like the ML way. Do not calculate this
+                % here. The user must create the object and then use the
+                % fit function. I no longer need a "system" attribute.
+                % It also has the benefit of not needing any training and
+                % testing indexes. the user trains with whatever they want
+                % to train with; the same for testing.
+                % obj.pqEDMD_array = get_pqEDMD_array(obj);
+                % obj.best_pqEDMD = get_best_pqEDMD(obj);
             end
         end
     end
     methods
-        function bestest = get_best_pqEDMD(obj)
-            bestest = obj.pqEDMD_array(obj.best_pqDecomposition);
-        end
-        function array_pqedmd = get_pqEDMD_array(obj)
-            % Get the snapshots
-            vvfos = getVVFOs(obj);
-            [X_train,Y_train, X_test, Y_test, norm_center, norm_scale] = pqEDMD.snapshots(obj.system, obj.tr_ts, obj.normalization);
-            switch obj.method
-                case 'OLS' % Ordinary Least Squares
-                    % Preallocate an array of decompositions
-                    array_pqedmd(numel(vvfos)) = ExtendedDecomposition();
-                    % iterate over the vvfos and get the decomposition.
-                    for pq_solution = 1 : numel(vvfos)
-                        array_pqedmd(pq_solution) = ExtendedDecomposition(vvfos(pq_solution), X_train, Y_train, X_test, Y_test, norm_center, norm_scale);
-                    end
-                case 'ML' % Maximum Likelihood
-                    % Preallocate an array of decompositions
-                    array_pqedmd(numel(vvfos)) = MaxLikeDecomposition();
-                    % iterate over the vvfos and get the decomposition.
-                    for pq_solution = 1 : numel(vvfos)
-                        array_pqedmd(pq_solution) = MaxLikeDecomposition(vvfos(pq_solution), X_train, Y_train, X_test, Y_test, norm_center, norm_scale);
-                    end
-                case 'RLS' % Regularized least squares
-                    array_pqedmd(numel(vvfos)) = RegularizedDecomposition();
-                    for pq_solution = 1 : numel(vvfos)
-                        array_pqedmd(pq_solution) = RegularizedDecomposition(vvfos(pq_solution), X_train, Y_train, X_test, Y_test, norm_center, norm_scale);
-                    end
-                case 'NCA' % Neighborhood Component Analysis
-                    array_pqedmd(numel(vvfos)) = NCA_Decomposition();
-                    for pq_solution = 1 : numel(vvfos)
-                        array_pqedmd(pq_solution) = NCA_Decomposition(vvfos(pq_solution), X_train, Y_train, X_test, Y_test, norm_center, norm_scale);
-                    end
+        % function bestest = get_best_pqEDMD(obj)
+        %     bestest = obj.pqEDMD_array(obj.best_pqDecomposition);
+        % end
+        function array_pqedmd = fit(obj, system)
+            % Canged to fit, to be in line with the ML way of doing things
+            vvfos = getVVFOs(obj, system);
+            [X_train,Y_train] = pqEDMD.snapshots(system);
+            % To avoid a huge switch case, I am using the str2func trick.
+            % just be consistent with the naming of any decomposition class
+            % or subclass.
+            % Preallocate an array of decompositions
+            [cell_pqedmd{1:numel(vvfos)}] = deal(str2func([obj.method,'Decomposition']));
+            for pq_solution = 1 : numel(vvfos)
+                cell_pqedmd{pq_solution} = cell_pqedmd{pq_solution}...
+                    (vvfos(pq_solution), X_train, Y_train);
             end
-
+            array_pqedmd = [cell_pqedmd{:}]; % turn into array
         end
-        function vvfos = getVVFOs(obj)
+        function vvfos = getVVFOs(obj, system)
             % creates an array of vvfos to evaluate the later.
             % Gets the number of state variables
-            nSV = size(obj.system(1).SV,2);
+            nSV = size(system(1).sv,2);
             % Gets the number of inputs.
-            if isfield(obj.system,'U')
-                nU = size(obj.system(1).U,2);
+            if isfield(system,'U')
+                nU = size(system(1).U,2);
             else
                 nU = 0;
             end
@@ -175,11 +158,12 @@ classdef pqEDMD
             % Delete unnecassary vvfos
             vvfos(unique_vvfos_index:end)=[];
         end
-        function best_pq = get.best_pqDecomposition(obj)
-            [~,best_pq] = min([obj.pqEDMD_array.error]);
-        end
+        % function best_pq = get.best_pqDecomposition(obj)
+        %     [~,best_pq] = min([obj.pqEDMD_array.error]);
+        % end
     end
     methods (Static)
+       
         function hpm = huge_pMatrix(nSV, p_value)
             if (nSV)*p_value^(nSV) >= 1e8
                 hpm=inf;
@@ -208,70 +192,29 @@ classdef pqEDMD
                 end
             end
         end
-        function [xtr, ytr, xts, yts, center, scale] = snapshots(system, tr_ts, normalization)
+        function [xtr, ytr] = snapshots(system)
             % Number of trajectories from the system to populate the
             % snapshots
-            training_number = numel(tr_ts.tr_index);
+            orbits_number = numel(system);
             % First, store the snapshots in a cell
-            [xtr_cell, ytr_cell] = deal(cell(training_number,1));
-            for trj = 1 : training_number
+            [xtr_cell, ytr_cell] = deal(cell(orbits_number, 1));
+            for trj = 1 : orbits_number
                 % Extract the appropriate datpoints for x and y
-                xtr_cell{trj} = system(tr_ts.tr_index(trj)).SV(1:end-2,:);
-                ytr_cell{trj} = system(tr_ts.tr_index(trj)).SV(2:end-1,:);
+                xtr_cell{trj} = system(trj).sv(1:end-2,:);
+                ytr_cell{trj} = system(trj).sv(2:end-1,:);
                 if isfield(system,'U')
-                    xtr_cell{trj} = [xtr_cell{trj}, system(tr_ts.tr_index(trj)).U(1:end-2,:)];
-                    ytr_cell{trj} = [ytr_cell{trj}, system(tr_ts.tr_index(trj)).U(2:end-1,:)];
+                    xtr_cell{trj} = [xtr_cell{trj}, system(trj).U(1:end-2,:)];
+                    ytr_cell{trj} = [ytr_cell{trj}, system(trj).U(2:end-1,:)];
                 end
             end
             % Turn cells into a matrix
             xtr = cell2mat(xtr_cell);
             ytr = cell2mat(ytr_cell);
-            % Normalize if necessary
-            if normalization
-                [xtr,center,scale] = normalize(xtr,"range");
-                ytr = normalize(ytr,'center',center,'scale',scale);
-            else
-                center = zeros(1, size(xtr,2));
-                scale = ones(1, size(xtr,2));
-            end
-            % For the test trajectories, we need each of them in a
-            % differerent cell because we want to compare the whole
-            % trajectory based on the initial condition
-            testing_number = numel(tr_ts.ts_index);
-            [xts, yts] = deal(cell(testing_number,1));
-            for trj = 1 : testing_number
-                xts{trj} = normalize(system(tr_ts.ts_index(trj)).SV(1:end-2,:),...
-                    'center',center(1:size(system(tr_ts.ts_index(trj)).SV,2)),...
-                    'scale',scale(1:size(system(tr_ts.ts_index(trj)).SV,2)));
-                yts{trj} = normalize(system(tr_ts.ts_index(trj)).SV(2:end-1,:),...
-                    'center',center(1:size(system(tr_ts.ts_index(trj)).SV,2)),...
-                    'scale',scale(1:size(system(tr_ts.ts_index(trj)).SV,2)));
-                if isfield(system,'U')
-                    xts{trj} = [xts{trj}, normalize(system(tr_ts.ts_index(trj)).U(1:end-2,:),...
-                        'center',center(end-size(system(tr_ts.ts_index(trj)).U,2)+1:end),...
-                        'scale',scale(end-size(system(tr_ts.ts_index(trj)).U,2)+1:end))];
-                    yts{trj} = [yts{trj}, normalize(system(tr_ts.ts_index(trj)).U(2:end-1,:),...
-                        'center',center(end-size(system(tr_ts.ts_index(trj)).U,2)+1:end),...
-                        'scale',scale(end-size(system(tr_ts.ts_index(trj)).U,2)+1:end))];
-                end
-            end
         end
     end
 end
 
 % Function to check if the system structure has the necessary fields in the structure
-function systemStructureCheck(sys_struct)
-if ~(all(isfield(sys_struct, {'Time', 'SV'})))
-    eidType = 'pqEDMD_data:notValidStructure';
-    msgType = 'Value structure assigned to system property does not contain Time and SV values.';
-    throwAsCaller(MException(eidType,msgType))
-end
-if (numel(fieldnames(sys_struct))>3) && ~(isfield(sys_struct,'U'))
-    eidType = 'pqEDMD_data:notValidStructure';
-    msgType = 'Value structure for inputs must be U.';
-    throwAsCaller(MException(eidType,msgType))
-end
-end
 function polycheck(polynomial, polyParam)
 if strcmp(polynomial, 'Gegenbauer') && ~isequal(size(polyParam),[1 1])
     eidType = 'pqEDMD_data:notValidPolynomialParameter';
@@ -281,13 +224,6 @@ end
 if strcmp(polynomial, 'Jacobi') && ~isequal(size(polyParam), [1 2])
     eidTypeJ = 'pqEDMD_data:notValidPolynomialParameters';
     msgTypeJ = 'Jacobi Plonomials need a 1x2 parameter vector.';
-    throwAsCaller(MException(eidTypeJ,msgTypeJ))
-end
-end
-function tr_ts_check(tr_ts_param)
-if ~all(isfield(tr_ts_param,{'tr_index', 'ts_index'}))
-    eidTypeJ = 'pqEDMD_data:notValidTrainingTesting';
-    msgTypeJ = 'Value structure assigned to tr_ts property does not contain tr_index and ts_index values.';
     throwAsCaller(MException(eidTypeJ,msgTypeJ))
 end
 end

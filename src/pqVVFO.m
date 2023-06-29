@@ -37,8 +37,9 @@ classdef pqVVFO < handle
             'ChebyshevU',...
             'Gegenbauer',...
             'Jacobi'})} = 'Legendre' % Type of polynomial
-        polyParam (1,:) {mustBePositive, mustBeInteger} = [1 1] % Parameter of polynomials
+        polyParam (1,:) {mustBePositive, mustBeInteger} = [1 1] % Parameter of Gengen and Jac polynomials
         huge_pMatrix (:,:) = [] % Equivalent p values have hthe same base matrix. Input to avoid recalculation
+        
     end
     properties
         polynomials_order % Final matrix of polynomial orders after pq reduction
@@ -46,6 +47,12 @@ classdef pqVVFO < handle
     properties (Dependent) %
         polynomial_base % Symbolic array of observable functions
         Psi % matlabFunction for the evaluation of the observables
+        R  % R matrix from QR decomposition
+        R_trx % R transformation matrix. just the inverse or R
+    end
+    properties (Hidden, Access=private)
+        R_
+        R_trx_
     end
 
     methods
@@ -64,6 +71,7 @@ classdef pqVVFO < handle
                 addOptional(in,'polynomial',obj.polynomial)
                 addOptional(in,'polyParam', obj.polyParam);
                 addOptional(in,'huge_pMatrix', obj.huge_pMatrix);
+                addOptional(in,'R',[])
 
                 parse(in,varargin{:})
                 obj.nSV = in.Results.nSV;
@@ -71,20 +79,23 @@ classdef pqVVFO < handle
                 obj.polynomial = in.Results.polynomial;
                 obj.polyParam = in.Results.polyParam;
                 % Check if the huge p matrix is given, else, build it.
-                obj.huge_pMatrix = pqVVFO.check_pMatrix(in.Results.huge_pMatrix, obj.nSV, obj.p);
+                obj.huge_pMatrix = obj.check_pMatrix(in.Results.huge_pMatrix, obj.nSV, obj.p);
                 %
-                obj.polynomials_order = getPolynomialsOrder(obj);
+                obj.R = in.Results.R;
+                
             end
         end
-        function poly_orders = getPolynomialsOrder(obj)
+        function poly_orders = get.polynomials_order(obj)
             if ~isinf(obj.huge_pMatrix)
-                poly_orders = obj.huge_pMatrix(:,vecnorm(obj.huge_pMatrix,obj.q)<=obj.p);
+                poly_orders = obj.huge_pMatrix(:, ...
+                    vecnorm(obj.huge_pMatrix,obj.q)<=obj.p);
             else
                 poly_orders = pqVVFO.elementwisePsiOrders(obj.nSV, obj.p, obj.q);
             end
             % Add the ordering
             [~,  sorting] = sort(vecnorm(poly_orders,obj.p));
             poly_orders = poly_orders(:,sorting);
+            % Add the inputs
             poly_orders = [poly_orders, zeros(size(poly_orders, 1), obj.nU);...
                 zeros(obj.nU,size(poly_orders, 2)),       eye(obj.nU)];
 
@@ -117,7 +128,7 @@ classdef pqVVFO < handle
         function psi = get.Psi(obj)
             % Temoporal copy of the symbolic basis to avoid calling
             % the get method several times
-            poly_base = obj.polynomial_base;
+            poly_base = obj.polynomial_base*obj.R_trx;
             if all(~logical(obj.polynomials_order(:,1)))
                 % If the first column of polybase is all zeros, then there
                 % is a constant term. if that is the case, the psi
@@ -125,6 +136,21 @@ classdef pqVVFO < handle
                 psi = matlabFunction(poly_base(2:end),'var',{sym('x',[1 length(poly_base)-1])});
             else
                 psi = matlabFunction(poly_base,'var',{sym('x',[1 length(poly_base)])});
+            end
+        end
+        function r = get.R(obj)
+            r = obj.R_;
+        end
+        function rtrx = get.R_trx(obj)
+            rtrx = obj.R_trx_;
+        end
+        function set.R(obj, r_val)
+            [~, n_obs] = size(obj.polynomials_order);
+            if ~isempty(r_val) &&  all(size(r_val))==all([n_obs, n_obs])
+                obj.R_ = r_val;
+                obj.R_trx_ = inv(r_val);
+            else
+                [obj.R_, obj.R_trx_] = deal(eye(n_obs));
             end
         end
         function E = eq(obj1,obj2)
@@ -147,7 +173,7 @@ classdef pqVVFO < handle
                 error('Imposible to calculate observable, maximum number of iteration in elementwise calculation will be exceedeed')
             elseif (nSV)*p_value(1)^(nSV) >= 1e10
                 hpm=inf;
-                warning('huge_pMatrix is for vector comparison, reverting to element-wise calculation. Go grab a coffee!')
+                warning('huge_pMatrix is too big for vector comparison, reverting to element-wise calculation. Go grab a coffee!')
             else
                 hpm = flip(dec2base(0:(p_value(1)+1)^(nSV) - 1, p_value(1) + 1) - '0',2)';
             end
