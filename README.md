@@ -12,6 +12,5 @@ Add all the files to your Matlab path
 
 In the *samples* directory there is a script that runs the code with the three different parametrisations of the duffing equation. 
 
-It uses the helper class *Orbits*, for the numerical integration of the system, and generating the structures that feed the *pqEDMD* class.
 
 
