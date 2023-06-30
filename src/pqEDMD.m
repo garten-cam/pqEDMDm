@@ -57,7 +57,7 @@ classdef pqEDMD
         best_pqDecomposition
     end
     methods
-        function obj = pqEDMD(system, varargin)
+        function obj = pqEDMD(varargin)
             if nargin > 0
                 % name-value attributes for constructor
                 in = inputParser;
@@ -68,7 +68,7 @@ classdef pqEDMD
                 addOptional(in, 'polyParam', obj.polyParam);
                 addOptional(in, 'method', obj.method);
 
-                parse(in, system, varargin{:});
+                parse(in, varargin{:});
 
                 % obj.system = in.Results.system;
                 obj.p = in.Results.p;
