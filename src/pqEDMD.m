@@ -23,7 +23,7 @@
 classdef pqEDMD
     %PQEDMD calculates the pqEDMD for a particular system
     % with or without inputs
-
+    
     properties % Inputs
         % I should not save this structure as a property, It adds
         % overhead to the class because it just keeps a copy of the
@@ -67,9 +67,9 @@ classdef pqEDMD
                 addOptional(in, 'polynomial', obj.polynomial);
                 addOptional(in, 'polyParam', obj.polyParam);
                 addOptional(in, 'method', obj.method);
-
+                
                 parse(in, system, varargin{:});
-
+                
                 % obj.system = in.Results.system;
                 obj.p = in.Results.p;
                 obj.q = in.Results.q;
@@ -78,7 +78,7 @@ classdef pqEDMD
                 obj.polyParam = in.Results.polyParam;
                 % obj.normalization = in.Results.normalization;
                 obj.method = in.Results.method;
-
+                
                 % For the real thing, after dealing with the inputs...
                 % check for polynomial parameters
                 polycheck(obj.polynomial,obj.polyParam);
@@ -163,7 +163,7 @@ classdef pqEDMD
         % end
     end
     methods (Static)
-       
+        
         function hpm = huge_pMatrix(nSV, p_value)
             if (nSV)*p_value^(nSV) >= 1e8
                 hpm=inf;
@@ -227,4 +227,3 @@ if strcmp(polynomial, 'Jacobi') && ~isequal(size(polyParam), [1 2])
     throwAsCaller(MException(eidTypeJ,msgTypeJ))
 end
 end
-
