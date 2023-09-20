@@ -117,8 +117,8 @@ classdef pqEDMD
             % Gets the number of state variables
             nSV = size(system(1).sv,2);
             % Gets the number of inputs.
-            if isfield(system,'U')
-                nU = size(system(1).U,2);
+            if isfield(system,'u')
+                nU = size(system(1).u,2);
             else
                 nU = 0;
             end
@@ -202,9 +202,9 @@ classdef pqEDMD
                 % Extract the appropriate datpoints for x and y
                 xtr_cell{trj} = system(trj).sv(1:end-2,:);
                 ytr_cell{trj} = system(trj).sv(2:end-1,:);
-                if isfield(system,'U')
-                    xtr_cell{trj} = [xtr_cell{trj}, system(trj).U(1:end-2,:)];
-                    ytr_cell{trj} = [ytr_cell{trj}, system(trj).U(2:end-1,:)];
+                if isfield(system,'u')
+                    xtr_cell{trj} = [xtr_cell{trj}, system(trj).u(1:end-2,:)];
+                    ytr_cell{trj} = [ytr_cell{trj}, system(trj).u(2:end-1,:)];
                 end
             end
             % Turn cells into a matrix
