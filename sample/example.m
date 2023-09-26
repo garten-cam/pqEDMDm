@@ -119,10 +119,12 @@ gas_ols = gas_pq.fit(gas_o(tr));
 %
 % errors
 % preallocate
+%%
 err = zeros(numel(gas_ols),1);
 for decp = 1 : numel(gas_ols)
 err(decp) = gas_ols(decp).error(gas_o(ts));
 end
+%%
 % where is the min?
 [~, best] = min(err);
 % Get the predictions from the EDMD models
@@ -170,7 +172,7 @@ for orb = 1 : num_ics
         ics(orb,:), ...
         odeSettings);       
 end
-%
+%%
 % Test the orthogonal pqEDMD
 tr = 3; % index of training trajectories
 ts = [1 2 4 5 6];

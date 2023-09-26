@@ -12,23 +12,27 @@ classdef maxLikeDecomposition < Decomposition
         end
         function u = calculate_U(obj, xtr, ytr)
             % Initail condition for the optimization
-            u = calculate_U@Decomposition(obj, xtr, ytr);
+            u0 = calculate_U@Decomposition(obj, xtr, ytr);
             % x and y evaluation
             x_eval = obj.xy_eval(obj.VVFO, xtr);
+            % Now y
             y_eval = obj.xy_eval(obj.VVFO, ytr);
+            
             % Measurement Covariance matrix
             Q_in_f = q_matrix(obj, xtr);
 
             options = optimset('display','iter', ...
                 'Algorithm','levenberg-marquardt');
             % Optimize
+            u = zeros(size(u0));
+            u(1,1) = 1;
             for u_column = 2 : size(obj.VVFO.polynomial_base,2)
                 u(:,u_column) = fminunc(@(u_col)obj.cost_function(u_col, ... parameters to identify
                     Q_in_f, ... measurement covariance matrix
                     Q_in_f(u_column, u_column), ... y column covariance
                     x_eval, ... Full x_eval matrix
                     y_eval(:,u_column)), ... % The y column to approximate
-                    u(:,u_column),options);% -abs(u(:,u_column))*1000, abs(u(:,u_column))*1000,options); % used the u from OLS as starting point.
+                    u0(:,u_column),options);% -abs(u(:,u_column))*1000, abs(u(:,u_column))*1000,options); % used the u from OLS as starting point.
                     % x0         , lb                   , ub
             end
         end

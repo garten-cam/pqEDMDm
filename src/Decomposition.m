@@ -52,6 +52,10 @@ classdef Decomposition
             end
         end
         function u = calculate_U(obj, xtr, ytr)
+             % x_eval = obj.xy_eval(obj.VVFO, xtr);
+             % y_eval = obj.xy_eval(obj.VVFO, ytr);
+             % [Qx,R] = qr(x_eval,'econ');
+             % u = (R'*R)\(x_eval'*y_eval);
             u = g(obj, xtr)\a(obj, xtr, ytr);
         end
         function g = g(obj, xtr)
@@ -61,16 +65,20 @@ classdef Decomposition
             x_eval = obj.xy_eval(obj.VVFO, xtr);
             % QR for orthogonalization
             [~, obj.VVFO.R] = qr(x_eval, "econ");
+            % Every time I change the value of the VVFO, I need to
+            % recalculate the affected properties. This is a consequence of
+            % sacrificing convenient behavior for performance. 
+            obj.VVFO.Psi = []; % this empty value recalculates the thing
             % evaluate x again
             x_eval = obj.xy_eval(obj.VVFO, xtr);
             % Calculate the second g
-            g = (x_eval'*x_eval)*(1/size(xtr,1));
+            g = (x_eval'*x_eval);
         end
         function a = a(obj, xtr, ytr) 
             % u'=g\a < this a
             x_eval = obj.xy_eval(obj.VVFO, xtr);
             y_eval = obj.xy_eval(obj.VVFO, ytr);
-            a = (x_eval'*y_eval)*(1/size(xtr,1));
+            a = (x_eval'*y_eval);
         end
         function a = calculate_A(obj)
             % get the A matrix from the system x = Ax
@@ -88,9 +96,9 @@ classdef Decomposition
                 2:obj.VVFO.nSV + 1);
             z = sym('z',[1 obj.VVFO.nSV],'real');
             sol = solve(order_one_obs' == z');
-            [AA, bb] = equationsToMatrix([struct2array(sol)]);
-            c = [-bb, AA, zeros(obj.VVFO.nSV, ...
-                size(obj.VVFO.polynomial_base,2) - (obj.VVFO.nSV + 1))];
+            [AA, bb] = equationsToMatrix([struct2array(sol)],z);
+            c = double([-bb, AA, zeros(obj.VVFO.nSV, ...
+                size(obj.VVFO.polynomial_base,2) - (obj.VVFO.nSV + 1))]);
         end
         function evf = calculate_evol(obj)
             % variables for the function
@@ -110,15 +118,16 @@ classdef Decomposition
             for orb = 1 : size(x0,1)
                 pred(orb).sv(1,:) = x0(orb,:);
             end
-            for orb = 1 : size(x0,1)
-                for datapoint = 2 : n_points(orb)
+            for orb = 1 : size(x0,1) % For all the initial conditions
+                for datapoint = 2 : n_points(orb) % and all the points in
+                    % sim horizon... 
                     % assign a dummy x_prev. Only necessary because there
                     % can be inputs in the system
                     if isempty(u)
                         xprev = pred(orb).sv(datapoint-1,:);
                     else
                         xprev = [pred(orb).sv(datapoint - 1, :), ...
-                            u(orb).u(datapoint - 1, :)];
+                            u{orb}(datapoint - 1, :)];
                     end
                     % calculate the evolution
                     xpost = obj.evol_function(xprev);
@@ -132,25 +141,47 @@ classdef Decomposition
         function err = error(obj, xts)
             % error returns the error over all the provided testing
             % samples
-            % predict all the xts for this decomposition
-            % extract the initial conditions
-            x0 = cell2mat(arrayfun(@(x) x.sv(1, :), xts, ...
-                'UniformOutput', false));
-            % extract the numper of points per orbit
-            np = arrayfun(@(x) size(x.sv,1), xts);
-            % preallocate
-            % !!preallocate all the things!!!
-            pred = obj.predict(x0, np);
+            % Get the prediction to calculate error
+            pred = obj.pred_from_test(xts);
             xts_mat = cell2mat(arrayfun(@(x) x.sv, xts, ...
                 'UniformOutput', false));
             pred_mat = cell2mat(arrayfun(@(x) x.sv, pred, ...
                 'UniformOutput', false));
             err = sum(abs(xts_mat-pred_mat)./(abs(xts_mat)+eps),"all")/length(xts_mat)/obj.VVFO.nSV;
         end
+        function err = abs_error(obj, xts)
+            % error returns the error over all the provided testing
+            % samples
+            % Get the prediction to calculate error
+            pred = obj.pred_from_test(xts);
+            xts_mat = cell2mat(arrayfun(@(x) x.sv, xts, ...
+                'UniformOutput', false));
+            pred_mat = cell2mat(arrayfun(@(x) x.sv, pred, ...
+                'UniformOutput', false));
+            err = sum(abs(xts_mat-pred_mat),"all")/length(xts_mat)/obj.VVFO.nSV;
+        end
+        function pred = pred_from_test(obj, xts)
+            % predict all the xts for this decomposition:
+            % extract the initial conditions
+            x0 = cell2mat(arrayfun(@(x) x.sv(1, :), xts, ...
+                'UniformOutput', false));
+            % extract the numper of points per orbit
+            np = arrayfun(@(x) size(x.sv,1), xts);
+            % preallocate
+            % I have to deal with the inputs. This was wrong....
+            if isfield(xts, "u")
+                pred = obj.predict(x0, np, {xts.u});
+            else
+                pred = obj.predict(x0, np);
+            end
+        end
     end
     methods (Static)
         function ev = xy_eval(obs, xytr)
             % xy_eval evaluates the data with the observable or VVFO
+            % I need to save Psi in a dummy, this thing is so slow because
+            % it has to recalculate something that shouls be calculated
+            % once sevel times.
             Psi = obs.Psi;
             ev = [ones(size(xytr,1),1).*obs.R_trx(1,1), Psi(xytr)];
         end

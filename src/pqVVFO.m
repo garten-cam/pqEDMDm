@@ -41,16 +41,21 @@ classdef pqVVFO < handle
         huge_pMatrix (:,:) = [] % Equivalent p values have hthe same base matrix. Input to avoid recalculation
         
     end
-    properties
-        polynomials_order % Final matrix of polynomial orders after pq reduction
-    end
     properties (Dependent) %
+        polynomials_order % Final matrix of polynomial orders after pq reduction
         polynomial_base % Symbolic array of observable functions
         Psi % matlabFunction for the evaluation of the observables
         R  % R matrix from QR decomposition
         R_trx % R transformation matrix. just the inverse or R
     end
     properties (Hidden, Access=private)
+        % This defreats the whole purpose of having a handle class and
+        % dependent methods. Now I have to update the polynomial base and
+        % the Psi every time there is a change in the orders. e.g.,
+        % eliminating observables with a qr decomposition.
+        polynomials_order_ % To avoid recalculation when calling
+        polynomial_base_ % Same ^
+        Psi_ % Same             ^
         R_
         R_trx_
     end
@@ -81,61 +86,96 @@ classdef pqVVFO < handle
                 % Check if the huge p matrix is given, else, build it.
                 obj.huge_pMatrix = obj.check_pMatrix(in.Results.huge_pMatrix, obj.nSV, obj.p);
                 %
+                % obj.polynomials_order = [];
+                % obj.polynomial_base = [];
                 obj.R = in.Results.R;
                 
             end
         end
         function poly_orders = get.polynomials_order(obj)
-            if ~isinf(obj.huge_pMatrix)
-                poly_orders = obj.huge_pMatrix(:, ...
-                    vecnorm(obj.huge_pMatrix,obj.q)<=obj.p);
-            else
-                poly_orders = pqVVFO.elementwisePsiOrders(obj.nSV, obj.p, obj.q);
+            % I deeply dislike this trick. 
+            if ~isempty(obj.polynomials_order_)
+                poly_orders = obj.polynomials_order_;
+            else % Assign the value to the dummy before returning
+                obj.polynomials_order = [];
+                poly_orders = obj.polynomials_order_;
             end
-            % Add the ordering
-            [~,  sorting] = sort(vecnorm(poly_orders,obj.p));
-            poly_orders = poly_orders(:,sorting);
-            % Add the inputs
-            poly_orders = [poly_orders, zeros(size(poly_orders, 1), obj.nU);...
-                zeros(obj.nU,size(poly_orders, 2)),       eye(obj.nU)];
-
         end
         function set.polynomials_order(obj, poly_order)
-            obj.polynomials_order = poly_order;
+            if ~isempty(poly_order)
+                obj.polynomials_order_ = poly_order;
+            else
+                if ~isinf(obj.huge_pMatrix)
+                    poly_orders = obj.huge_pMatrix(:, ...
+                        vecnorm(obj.huge_pMatrix,obj.q)<=obj.p);
+                else
+                    poly_orders = pqVVFO.elementwisePsiOrders(obj.nSV, obj.p, obj.q);
+                end
+                % Add the ordering
+                [~,  sorting] = sort(vecnorm(poly_orders,obj.p));
+                poly_orders = poly_orders(:,sorting);
+                % Add the inputs
+                poly_orders = [poly_orders, zeros(size(poly_orders, 1), obj.nU);...
+                    zeros(obj.nU,size(poly_orders, 2)), eye(obj.nU)];
+                obj.polynomials_order_ = poly_orders;
+            end
         end
         function base = get.polynomial_base(obj)
             % Returns a function to evaluate the vvfo according to the
             % order indices and the number of state variables and
             % inputs.
-
-            % First, get the base polynomial function
-            base_polyF = pqVVFO.polyString2Func(obj.polynomial, obj.polyParam);
-            % Create an array of symbolic variables
-            xsym = sym('x',[1 (obj.nSV + obj.nU)],'real');
-            % Preallocate the matrix of symbolic variables
-            xPsi = sym(ones(size(obj.polynomials_order)));
-            % Loop over the state variables to assign the polynomial
-            % according to the order and variable
-            for state_variable = 1 : obj.nSV
-                xPsi(state_variable,1:end-obj.nU) = base_polyF(obj.polynomials_order(state_variable,1:end-obj.nU), xsym(state_variable)) ;
+            if ~isempty(obj.polynomial_base_)
+                base = obj.polynomial_base_;
+            else
+                obj.polynomial_base = [];
+                base = obj.polynomial_base_;
             end
-            % Add the variables for the inputs
-            if obj.nU
-                xPsi(end-obj.nU+1:end, end-obj.nU+1:end) = diag(xsym(end-obj.nU+1:end))+~eye(obj.nU);
+        end
+        function set.polynomial_base(obj, val)
+            if ~isempty(val)
+                obj.polynomial_base_ = val;
+            else
+                % First, get the base polynomial function
+                base_polyF = pqVVFO.polyString2Func(obj.polynomial, obj.polyParam);
+                % Create an array of symbolic variables
+                xsym = sym('x',[1 (obj.nSV + obj.nU)],'real');
+                % Preallocate the matrix of symbolic variables
+                xPsi = sym(ones(size(obj.polynomials_order)));
+                % Loop over the state variables to assign the polynomial
+                % according to the order and variable
+                for state_variable = 1 : obj.nSV
+                    xPsi(state_variable,1:end-obj.nU) = base_polyF(obj.polynomials_order(state_variable,1:end-obj.nU), xsym(state_variable)) ;
+                end
+                % Add the variables for the inputs
+                if obj.nU
+                    xPsi(end-obj.nU+1:end, end-obj.nU+1:end) = diag(xsym(end-obj.nU+1:end))+~eye(obj.nU);
+                end
+                obj.polynomial_base_ = prod(xPsi,1);
             end
-            base = prod(xPsi,1);
         end
         function psi = get.Psi(obj)
             % Temoporal copy of the symbolic basis to avoid calling
             % the get method several times
-            poly_base = obj.polynomial_base*obj.R_trx;
-            if all(~logical(obj.polynomials_order(:,1)))
-                % If the first column of polybase is all zeros, then there
-                % is a constant term. if that is the case, the psi
-                % matlabFunction does not allow for vectorial evaluation
-                psi = matlabFunction(poly_base(2:end),'var',{sym('x',[1 length(poly_base)-1])});
+            if ~isempty(obj.Psi_)
+                psi = obj.Psi_;
             else
-                psi = matlabFunction(poly_base,'var',{sym('x',[1 length(poly_base)])});
+                obj.Psi = [];
+                psi = obj.Psi_;
+            end
+        end
+        function set.Psi(obj, val)
+            if ~isempty(val)
+                obj.Psi_ = val;
+            else
+                poly_base = obj.polynomial_base*obj.R_trx;
+                if all(~logical(obj.polynomials_order(:,1)))
+                    % If the first column of polybase is all zeros, then there
+                    % is a constant term. if that is the case, the psi
+                    % matlabFunction does not allow for vectorial evaluation
+                    obj.Psi_ = matlabFunction(poly_base(2:end),'var',{sym('x',[1 length(poly_base)-1])});
+                else
+                    obj.Psi_ = matlabFunction(poly_base,'var',{sym('x',[1 length(poly_base)])});
+                end
             end
         end
         function r = get.R(obj)

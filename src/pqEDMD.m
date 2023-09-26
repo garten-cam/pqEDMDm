@@ -47,8 +47,8 @@ classdef pqEDMD
         % [Also responsibility of the user] normalization = false
         method (1,:) char {mustBeMember(method,{'OLS',... Ordinary Least Squares
             '',... Normal Decomposition
-            'maxLike' ... Maximum lilekihood decomposition
-            })} = ''
+            'maxLike', ... Maximum lilekihood decomposition
+            'regularized'})} = ''
     end
     properties % Calculated properties that help in the calculation
         best_pqEDMD % Best solution
@@ -94,9 +94,6 @@ classdef pqEDMD
         end
     end
     methods
-        % function bestest = get_best_pqEDMD(obj)
-        %     bestest = obj.pqEDMD_array(obj.best_pqDecomposition);
-        % end
         function array_pqedmd = fit(obj, system)
             % Canged to fit, to be in line with the ML way of doing things
             vvfos = getVVFOs(obj, system);
@@ -124,7 +121,7 @@ classdef pqEDMD
             end
             % Create an emty vvfo array with the maximum value of
             % ontries, i.e., numel p * numel q. Al of these are not
-            % distincst, therefore the loop ahead will deal with these
+            % distinct, therefore the loop ahead will deal with these
             % cases.
             unique_vvfos_index = 1;
             % Prealocates a suffieciently large vvfo array
@@ -142,7 +139,8 @@ classdef pqEDMD
                         'polynomial', obj.polynomial,...
                         'huge_pMatrix', hpm,...
                         'polyParam', obj.polyParam);
-                    if unique_vvfos_index > 1
+                    % anything after  the first need to be checked
+                    if unique_vvfos_index > 1 
                         % Compare the evaluated vvfo with the previous
                         % ones to discard the equivalent ones.
                         if ~pqEDMD.compare_vvfo_eval(vvfo_eval, vvfos, unique_vvfos_index)
@@ -150,6 +148,7 @@ classdef pqEDMD
                             unique_vvfos_index = unique_vvfos_index + 1;
                         end
                     else
+                        % Populates the first entry. 
                         vvfos(unique_vvfos_index) = vvfo_eval;
                         unique_vvfos_index = unique_vvfos_index + 1;
                     end
@@ -158,9 +157,6 @@ classdef pqEDMD
             % Delete unnecassary vvfos
             vvfos(unique_vvfos_index:end)=[];
         end
-        % function best_pq = get.best_pqDecomposition(obj)
-        %     [~,best_pq] = min([obj.pqEDMD_array.error]);
-        % end
     end
     methods (Static)
         
