@@ -45,10 +45,10 @@ classdef pqEDMD
             'Jacobi'})} = 'Legendre'
         polyParam (1,:) {mustBePositive, mustBeInteger} = [1 1]
         % [Also responsibility of the user] normalization = false
-        method (1,:) char {mustBeMember(method,{'OLS',... Ordinary Least Squares
+        method (1,:) char {mustBeMember(method,{... Ordinary Least Squares
             '',... Normal Decomposition
             'maxLike', ... Maximum lilekihood decomposition
-            'regularized'})} = ''
+            'rrr'})} = ''
     end
     properties % Calculated properties that help in the calculation
         best_pqEDMD % Best solution
