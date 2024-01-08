@@ -16,7 +16,14 @@ $$
 \end{align}
 $$
 
-where the state $x\in\mathcal{M}\subseteq\mathbb{R}^{n}$ is the nonempty compact state space, with forcing signal $u\in\mathcal{U}\subseteq\mathbb{R}^{m}$ which is a nonempty compact input space, $y\in\mathcal{Y}\subseteq\mathbb{R}^{l}$ is the output space, $k\in\mathbb{Z}_{0}^{+}$ is the discrete time, $B\in\mathbb{R}^{n\times m}$, and the nonlinear transition operator is $T\colon{}\mathcal{M}\rightarrow{}\mathcal{M}$
+- $x\in\mathcal{M}\subseteq\mathbb{R}^{n}$ is the state.
+- $u\in\mathcal{U}\subseteq\mathbb{R}^{m}$ is the input.
+- $y\in\mathcal{Y}\subseteq\mathbb{R}^{l}$ is the output space.
+- $k\in\mathbb{Z}_{0}^{+}$ is the discrete time.
+- $T\colon{}\mathcal{M}\rightarrow{}\mathcal{M}$ is the nonlinear transition operator.
+- $B\in\mathbb{R}^{n\times m}$ is the input-to-state matrix.
+- $C\in\mathbb{R}^{l\times n}$ is the state-to-output matrix.
+- $D\in\mathbb{R}^{l\times m}$ is the input-to-output matrix.
 
 ## Installation
 
@@ -34,48 +41,37 @@ y(t) &=x(t)
 \end{align}
 $$
 
-Notice that the output is the state and that it is an autonomous system. The objective of the pqEDMD is to get the approximation of the system in discrete-time as a linear operator of a function space.
+After integrating the system from six arbitrary initial conditions, and selecting two of those trajectories as the training set, and the remaining for testing, the result of plotting the states against each other is:
+
+![Sample trajectories](examples/figures/tr_ts.png)
+
+From the sample trajectories, apply the algorithm with a `legendreObservable` and a `pqDecomposition`, that implements a traditional
+least squares regression. The result of the approximation is:
+
+![Results](examples/figures/approx.png)
+
+## Second Example
+
+Consider the same Duffing oscillator with a forcing signal $u=\cos(\omega t)$ on the second state, i.e.,
 
 $$
-\Psi(x(k+1)) = A \Psi(x(k))
+\begin{align}
+	\dot{x}_1(t)&=x_2(t)\\
+	\dot{x}_2(t)&=-\delta{}x_2(t)-x_1(t)(\beta+\alpha{}x_1^{2}(t)) + \cos(\omega t). \\
+y(t) &=x(t)
+\end{align}
 $$
 
-$$
-\Psi(x) = \begin{bmatrix}\psi_1(x) & \psi_2(x) & \cdots & \psi_l(x)\end{bmatrix}^{T}
-$$
+After selecting two trajectories for the estimating the system, four to test the result, and performing the approximation with a `legendreObservable` and a `svdDecomposition` gives the following results:
 
-To generate the data for the approximation of the Duffing equation (in this case, where the system has two asymptotically stable points), integrate the system from some random initial conditions.
-
-```MATLAB
-% Two asymptotically stable points response
-% parameters
-tas.alpha = -1;
-tas.beta = 1;
-tas.delta = 0.5;
-% The pqEDMD class accepts a structire array where the only necessary field
-% in the state variables. It is not a tensor, because not all the
-% trajectories are of the same lenght.
-
-% preallocate the structure of tas orbits
-tas_o = repmat(struct('sv', zeros(n_points, 2), ...
-                            't', zeros(n_points, 1)), num_ics,1);
-% I am saving the 't' time array only for plotting purposes. The algorithm
-% does not mind if that field is in there
-
-% Loop for all initial conditions
-odeSettings = odeset('RelTol',1e-3,'AbsTol',1e-6);
-for orb = 1 : num_ics
-    [tas_o(orb).t, tas_o(orb).sv] = ode23(@(t,x)DuffEqODE(t,x,tas),...
-        0:tfin/n_points:tfin, ...
-        ics(orb,:), ...
-        odeSettings);
-end
-```
+![Forced Duffing](examples/figures/forced_duff.png)
 
 ## TODO
 
 The current architecture for a decomposition is not versatile for extending to another type of decomposition different from LSQ.
 
-- [ ] Change the architecture of the code.
-
-- [ ] The observable and type of decomposition should enter the pqEDMD as an argument and become an attribute (property)
+- [x] Change the architecture of the code.
+- [x] The observable and type of decomposition should enter the pqEDMD as an argument and become an attribute (property)
+- [x] Remove the huge p matrix functionality.
+- [ ] Finish the sidDecomposition.
+- [ ] Complete the documentation.

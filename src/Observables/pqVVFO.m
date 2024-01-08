@@ -1,4 +1,4 @@
-% Author - Camilo Garcia-Tenorio Ph.D.
+    % Author - Camilo Garcia-Tenorio Ph.D.
 % MIT License
 
 % Copyright (c) 2022 Camilo Garcia-Tenorio
@@ -22,11 +22,15 @@
 % OTHER DEALINGS IN THE SOFTWARE.
 classdef pqVVFO < handle
     %PQVVFO Creates an instace of a vector valued function of
-    %observables for a single p  and q values and a type of polynomial
+    %observables for a single p and q values.
+    % 
+    % Even though it is not recomendable, this observable will return a
+    % monomial basis. All other typers of polynomial will inherit from this
+    % class to make the corresponding implementatio
 
     properties
         p (1,1) {mustBePositive, mustBeInteger, mustBeLessThanOrEqual(p,10)}  = 1 % Max poly order
-        q (1,1) {mustBePositive}  = 1 % q norm
+        q (1,1) {mustBePositive}  = 1 % q quasi-norm
         nSV (1,1) {mustBePositive, mustBeInteger} = 3 % Number of state variables
         nU (1,1) {mustBeNonnegative, mustBeInteger} = 0 % Number of inputs
         polynomial (1,:) char {mustBeMember(polynomial,...

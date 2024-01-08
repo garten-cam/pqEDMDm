@@ -36,14 +36,14 @@ for orb = 1 : num_ics
         odeSettings);       
 end
 %%
-% Test the orthogonal pqEDMD
+% Test the orthogkonal pqEDMD
 tr = 3; % index of training trajectories
 ts = [1 2 4 5 6];
 % create the decomposition object
 und_pq = pqEDMD(p=[2 3 4 5], ...
                q=[0.5 1 2], ...
                polynomial='Legendre', ...
-               method=''); % '' to use the ordinary least squares
+               method='sid'); % '' to use the ordinary least squares
 und_ols = und_pq.fit(und_o(tr));
 % The new iteration of the algorithm does not need a tr_ts thing. Just feed
 % the ncessary training trajectories into the new fit function
