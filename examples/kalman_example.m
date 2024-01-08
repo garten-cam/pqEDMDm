@@ -21,19 +21,17 @@
 % FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 % OTHER DEALINGS IN THE SOFTWARE.
 
-% Example to work with forcing sgnals
-rng(1) % For consistency
-%%
+% Example to work with forcing sgnals and kalman filter
+% run the forced example 
 % define the parameters for the simulation
+% rng(1)
 num_ics = 6; % Number of initial conditions for the test
 ics_width = 4; % ics range width
 % Create the initial conditions for the orbits
 ics = ics_width*rand(num_ics,2) - ics_width/2;
 tfin = 20;
-n_points = 10*tfin;
-%%
-% For the forced example I am only going to implement the duffing equation
-% with multistability
+% the sampling frequency is 5 times faster than the forced_example
+n_points = 50*tfin; 
 % Two asymptotically stable points response
 % parameters
 tas.alpha = -1;
@@ -71,7 +69,7 @@ ts = [1 2 4 5];
 tas_pq = pqEDMD(p=[7 8], ...
                q=[0.5 1 2], ...
                polynomial='Legendre', ...
-               method=''); % '' to use the ordinary least squares
+               method='rrr'); % '' to use the ordinary least squares
 tas_ols = tas_pq.fit(tas_o(tr));
 % The new iteration of the algorithm does not need a tr_ts thing. Just feed
 % the ncessary training trajectories into the new fit function

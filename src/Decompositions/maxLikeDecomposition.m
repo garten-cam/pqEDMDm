@@ -4,15 +4,17 @@ classdef maxLikeDecomposition < Decomposition
         Q
     end
     methods
-        function obj = maxLikeDecomposition(observable, xtr, ytr)
-            obj@Decomposition(observable, xtr, ytr)
+        function obj = maxLikeDecomposition(observable, system)
+            obj@Decomposition(observable, system)
             % Must recalculate Q because the parent constructor is
             % able to use it, but not store it.... ????
+            [~, xtr] = obj.snapshots(system);
             obj.Q = q_matrix(obj, xtr);
         end
-        function u = calculate_U(obj, xtr, ytr)
+        function u = calculate_U(obj, system)
             % Initail condition for the optimization
-            u0 = calculate_U@Decomposition(obj, xtr, ytr);
+            u0 = calculate_U@Decomposition(obj, system);
+            [xtr, ytr] = obj.snapshots(system);
             % x and y evaluation
             x_eval = obj.xy_eval(obj.VVFO, xtr);
             % Now y
@@ -22,7 +24,7 @@ classdef maxLikeDecomposition < Decomposition
             Q_in_f = q_matrix(obj, xtr);
 
             options = optimset('display','iter', ...
-                'Algorithm','levenberg-marquardt');
+                'Algorithm','quasi-newton');
             % Optimize
             u = zeros(size(u0));
             u(1,1) = 1;
