@@ -24,12 +24,14 @@ classdef sidDecomposition < pqDecomposition
     %SIDDECOMPOSITION subsytem identification EDMD
     properties
         K % Kalman gain of the solution
+        order
+        hl_bl
     end
     properties (Hidden)
-        order
+        
         Gamma
         C_edmd
-        hl_bl
+        
     end
     methods
         function obj = sidDecomposition(observable, system)
@@ -104,14 +106,15 @@ classdef sidDecomposition < pqDecomposition
                 R(2*m*hl_bl+1:2*m*hl_bl + num_obs*hl_bl, ...
                 1 : 2*m*hl_bl + num_obs*hl_bl),'econ');
             % Observability matrix Gamma
-            obj.order = sum(diag(S)>0.1);%size(S,1); % size depends on the effective rank
+            obj.order = num_obs*hl_bl;
+            % obj.order = sum(diag(S)/max(S,[],"all")>0.1);%size(S,1); % size depends on the effective rank
             U = U(:,1:obj.order);
             S = S(1:obj.order,1:obj.order);
             % V = V(:,1:obj.order);
             obj.Gamma = U*sqrtm(S);
 
-            Xpst = (pinv(obj.Gamma)*Oi);
-            Xfut = pinv(obj.Gamma(1:end-num_obs,:))*Oim;
+            Xpst = (pinv(obj.Gamma)*Oi); Xpstt = Xpst';
+            Xfut = pinv(obj.Gamma(1:end-num_obs,:))*Oim; Xfutt = Xfut';
 
             XfutY = [Xfut;UY(2*m*hl_bl+num_obs*hl_bl+1: ...
                 2*m*hl_bl+num_obs*(hl_bl+1),:)];

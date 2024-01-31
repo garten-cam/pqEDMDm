@@ -85,9 +85,9 @@ classdef pqObservable
                 error('Imposible to calculate observable, maximum number of iteration in elementwise calculation will be exceedeed')
             elseif (obj.l)*obj.p(1)^(obj.l) >= 1e10
                 hpm = inf;
-                warning('huge_pMatrix is too big for vector comparison, this is going to take while... Actually a for... you know what I mean.')
+                warning('huge_p_matrix is too big for vector comparison, this is going to take while... Actually, a "for"... you know what I mean.')
             else
-                hpm = flip(dec2base(1:(obj.p(1)+1)^(obj.l) - 1, obj.p(1) + 1) - '0',2)';
+                hpm = flip(dec2base(1:(obj.p+1)^(obj.l) - 1, obj.p + 1) - '0',2)';
             end
         end
     end

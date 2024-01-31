@@ -1,4 +1,4 @@
-figpath = "./pqEDMDm/examples/figures/";
+figpath = "./examples/figures/";
 % Example to work with forcing sgnals
 rng(1) % For consistency
 %%
@@ -53,22 +53,14 @@ tr = [1 3 5]; % index of training trajectories
 ts = [2 4 6];
 % create the decomposition object
 tas_pq = pqEDMDm(p=[4 5 6], ...
-  q=[0.5 1 2], ...
+  q=[0.4 2], ...
   observable = @legendreObservable, ...
-  dyn_dcp = @sidDecomposition); % '' to use the ordinary least squares
+  dyn_dcp = @sid_alt_Decomposition); % '' to use the ordinary least squares
 tas_ols = tas_pq.fit(tas_n(tr));
 % The new iteration of the algorithm does not need a tr_ts thing. Just feed
 % the ncessary training trajectories into the new fit function
 %
 %
-%%
-% test the prdiction with the first sample
-% load("x0.mat")
-% test_one = tas_ols(1).predict(x0',size(tas_n(1).t,1)-11,{tas_n(1).u(11:end,:)})
-% figure
-% hold on
-% plot(tas_n(1).sv(11:end,1),tas_n(1).sv(11:end,2),'b')
-% plot(test_one.y(:,1),test_one.y(:,2),'k')
 %%
 % errors
 % preallocate
@@ -98,7 +90,7 @@ for ts_i = 1 : numel(ts)
 end
 xlabel(lay_tas,'t','interpreter','latex')
 ylabel(lay_tas,'$x_1$,$x_2$','interpreter','latex')
-saveas(tas_f,strcat(figpath, "forced_sid.png"))
+saveas(tas_f,strcat(figpath, "forced_sid2.png"))
 % eigA = figure(2);
 % clf
 % hold on
