@@ -1,11 +1,11 @@
-classdef maxLikeDecomposition < Decomposition
+classdef maxLikeDecomposition < pqDecomposition
     % Apply maximum likelihood decomposition
     properties
         Q
     end
     methods
         function obj = maxLikeDecomposition(observable, system)
-            obj@Decomposition(observable, system)
+            obj@pqDecomposition(observable, system)
             % Must recalculate Q because the parent constructor is
             % able to use it, but not store it.... ????
             [~, xtr] = obj.snapshots(system);

@@ -67,9 +67,10 @@ classdef pqEDMDm
   end
   methods
       function array_pqedmd = fit(obj, system)
-          % Canged to fit, to be in line with the ML way of doing things
+          % Changed to fit, to be in line with the ML way of doing things
           vvfos = get_observables(obj, system);
-
+          
+          % run the decomposition for each of the unique obsevables.
           array_pqedmd = arrayfun(@(vfo) obj.dyn_dcp(vfo, system),vvfos);
 
       end

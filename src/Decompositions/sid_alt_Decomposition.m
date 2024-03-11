@@ -5,8 +5,7 @@ classdef sid_alt_Decomposition < pqDecomposition
         order
         hl_bl
          Gamma
-    end
-    properties (Hidden)
+    
      
         num_obs
        
@@ -17,6 +16,8 @@ classdef sid_alt_Decomposition < pqDecomposition
     methods
         function obj = sid_alt_Decomposition(observable, system)
             %SIDDECOMPOSITION
+
+            % Needs refactoring!! too long and unreadable
             obj.obs = observable; % saves the observable object
             % concatenation.
             [xeval_sys, u_sys] = obj.xu_eval(system);
@@ -24,10 +25,10 @@ classdef sid_alt_Decomposition < pqDecomposition
             obj.m = size(system(1).u,2);
             % output dim i.e., dim(y)
             obj.num_obs = size(obj.obs.polynomials_order, 2); % number of outputs, number of observables
-            samples_per_trj = cellfun(@(x) {size(x,1)},xeval_sys);
-            total_samples = min([samples_per_trj{:}]);
-            obj.hl_bl = floor(((total_samples + 1)/(2*(obj.num_obs + 1)))/(numel(xeval_sys)/2)); % Hankel blocks to use
-            
+            min_samples = min(cellfun(@(x) [size(x,1)],xeval_sys));
+            % Stablish the number of Hankel blocks
+            % obj.hl_bl = floor(((total_samples)/(2*(obj.num_obs)))/(numel(xeval_sys)/10)); % Hankel blocks to use
+            obj.hl_bl = floor(((min_samples)/((obj.num_obs*numel(xeval_sys))))); % Hankel blocks to use            
             % Hankelize
             % Usid=[Up;Uf]
             Usid = cell2mat(cellfun(@(x) ...
@@ -43,7 +44,7 @@ classdef sid_alt_Decomposition < pqDecomposition
 
             % Next, singular value decomp
             [U,S,~] = svd(WOW);
-            obj.order = sum(diag(S)/max(S,[],"all")>0.1);
+            obj.order = sum(diag(S)/max(S,[],"all")>0.01);
             U = U(:,1:obj.order);
             S = S(1:obj.order,1:obj.order);
 
@@ -77,6 +78,7 @@ classdef sid_alt_Decomposition < pqDecomposition
             end
         end
         function [ac, bd, res] = linear_sol_ACBD(obj, Usid, Ysid)
+            % mess of a function. needs cleaning and refactor
             gmm = obj.Gamma(1:end-obj.num_obs,:);
             % And their inverses
             gam_inv = pinv(obj.Gamma);
@@ -100,19 +102,27 @@ classdef sid_alt_Decomposition < pqDecomposition
             % right-hand-side = (gam_inv*z_i;Uf)
             rhs = [gam_inv*z_i;Usid(obj.hl_bl*obj.m+1:end,:)];
             ac = lhs/rhs;
-            A = ac(1:obj.order,1:obj.order);
-            C = ac(obj.order+1:obj.order+obj.num_obs,1:obj.order);
+            obj.A = ac(1:obj.order,1:obj.order);
+            obj.C = ac(obj.order+1:obj.order+obj.num_obs,1:obj.order);
             % Residuals
             res = lhs - ac*rhs;
 
+            % Recompute Gamma from A and C
+            obj = obj.recomputeGamma();
+            gmm = obj.Gamma(1:end-obj.num_obs,:);
+            % And their inverses
+            gam_inv = pinv(obj.Gamma);
+            % gmm_inv = pinv(gmm);
             % Now, for B and D. just follow the alg from the book
-            P = lhs - [A;C]*rhs(1:obj.order,:);
-            P = P(:,1:2*obj.m*obj.hl_bl);
-            Q = Usid(obj.hl_bl*obj.m+1:end,1:2*obj.m*obj.hl_bl);
-            L1 = A*gam_inv;
-            L2 = C*gam_inv;
+            % pg 125
+            P = lhs - [obj.A;obj.C]*rhs(1:obj.order,:);
+            % P = P(:,1:2*obj.m*obj.hl_bl);
+            % Q = Usid(obj.hl_bl*obj.m+1:end,1:2*obj.m*obj.hl_bl);
+            Q = Usid(obj.hl_bl*obj.m+1:end,:);
+            L1 = obj.A*gam_inv;
+            L2 = obj.C*gam_inv;
 
-            M = [zeros(obj.order,obj.num_obs),gam_inv];
+            M = [zeros(obj.order,obj.num_obs),gmm_inv];
             X = [eye(obj.num_obs), zeros(obj.num_obs,obj.order); ...
                  zeros(obj.num_obs*(obj.hl_bl-1),obj.num_obs), gmm];
 
@@ -131,8 +141,7 @@ classdef sid_alt_Decomposition < pqDecomposition
                 N = N*X;
                 totm = totm + kron(Q((k-1)*obj.m+1:k*obj.m,:)',N);
             end
-            P = P(:);
-            bd_vec = totm\P;
+            bd_vec = totm\P(:);
             bd = reshape(bd_vec,obj.order+obj.num_obs,obj.m);
         end
         function oi = obliqueP(obj, Usid,Ysid)
@@ -165,7 +174,7 @@ classdef sid_alt_Decomposition < pqDecomposition
                 pred(orb).y(1,:) = obj.C_edmd*obj.C*x0{orb};
                 pred(orb).sv(1,:) = x0{orb}';
                 for step = 2 : n_points(orb)
-                    if ~mod(step, ceil(obj.hl_bl/2))%ceil(obj.hl_bl/4))
+                    if ~mod(step, 1)%ceil(obj.hl_bl/4))
                         pred(orb).sv(step,:) = obj.A*pred(orb).sv(step-1,:)' + ...
                             obj.B*system(orb).u(step-1,:)' + ...
                             obj.K*(obsf(system(orb).y(step-1,:))' - (obj.C*pred(orb).sv(step-1,:)' + obj.D*system(orb).u(step-1,:)'));
@@ -174,7 +183,7 @@ classdef sid_alt_Decomposition < pqDecomposition
                             obj.B*system(orb).u(step-1,:)';
                     end
 
-                    pred(orb).y(step,:) = obj.C_edmd*(obj.C*pred(orb).sv(step,:)' + obj.D*system(orb).u(step,:)');
+                    pred(orb).y(step,:) = obj.C_edmd*(obj.C*pred(orb).sv(step,:)' + obj.D*system(orb).u(step-1,:)');
                 end
             end
         end

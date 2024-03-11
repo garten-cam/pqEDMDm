@@ -26,9 +26,6 @@ classdef sidDecomposition < pqDecomposition
         K % Kalman gain of the solution
         order
         hl_bl
-    end
-    properties (Hidden)
-        
         Gamma
         C_edmd
         

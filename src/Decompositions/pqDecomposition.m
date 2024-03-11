@@ -23,7 +23,7 @@
 classdef pqDecomposition
   %DECOMPOSITION parent class for all the decompositions.
   %
-  % Returns a set of matrices characterizing a system based on the EDMD
+  % Returns a set of matrices characterizing a system based on the pqEDMD
   % algorithm.
   %
   %
@@ -64,9 +64,8 @@ classdef pqDecomposition
         end
         
         % from the snapshots, get the regression
-        g = obs_pst'*obs_pst;
-        a = obs_pst'*obs_fut;
-        U = g\a; % This is the transpose of U
+        
+        U = obj.U(obs_pst, obs_fut); % This is the transpose of U
         
         obj.l = obj.obs.l;
         obj.n = size(obj.obs.polynomials_order,2) + 1;
@@ -80,14 +79,12 @@ classdef pqDecomposition
         obj.D = zeros(obj.l,1);
       end
     end
-    function [y_obs_pst, y_obs_fut] = y_snapshots(obj, system)
-      obsrv = obj.obs.obs_function;
-      y_obs_pst = cell2mat(arrayfun(@(trj) ...
-        {[ones(size(trj.y,1)-2,1) obsrv(trj.y(1:end-2,:))]}, system));
-      y_obs_fut = cell2mat(arrayfun(@(trj) ...
-        {[ones(size(trj.y,1)-2,1) obsrv(trj.y(2:end-1,:))]}, system));
+    function u = U(obj, obs_pst, obs_fut)
+        % Need this simple method here to inherit later
+        g = obs_pst'*obs_pst;
+        a = obs_pst'*obs_fut;
+        u = g/a;
     end
-    
     function a = matrix_A(obj, U)
       % get the A matrix from the system x = Ax
       a = U(1:end-obj.m, 1:end-obj.m)';
@@ -162,6 +159,13 @@ classdef pqDecomposition
       else
         pred = obj.predict(y0, np);
       end
+    end
+    function [y_obs_pst, y_obs_fut] = y_snapshots(obj, system)
+      obsrv = obj.obs.obs_function;
+      y_obs_pst = cell2mat(arrayfun(@(trj) ...
+        {[ones(size(trj.y,1)-2,1) obsrv(trj.y(1:end-2,:))]}, system));
+      y_obs_fut = cell2mat(arrayfun(@(trj) ...
+        {[ones(size(trj.y,1)-2,1) obsrv(trj.y(2:end-1,:))]}, system));
     end
     function spectrum(obj)
       figure()

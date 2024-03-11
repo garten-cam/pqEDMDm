@@ -39,18 +39,7 @@ classdef svdDecomposition < pqDecomposition
                 else
                     obj.m = 0;
                 end
-                [U,S,V] = svd(obs_pst);
-                s = diag(S);
-                % Efffective rank r of xeval_d
-                r = obj.effective_rank(s, obs_pst);
-                Ur = U(:,1:r);
-                Sr = diag(s(1:r));
-                Vr = V(:,1:r);
-                Dr = Sr\Ur'*obs_fut;
-
-                % fill dr with zeros in case r<d
-                % Dd = [Dr ; zeros(size(xeval_d,2)-r,size(xeval_d,2))];
-                U = Vr*Dr;
+                U = obj.U(obs_pst, obs_fut);
                 obj.l = obj.obs.l;
                 obj.n = size(obj.obs.polynomials_order,2) + 1;
 
@@ -62,6 +51,20 @@ classdef svdDecomposition < pqDecomposition
                 obj.C = obj.matrix_C;
                 obj.D = zeros(obj.l,obj.m);
             end
+        end
+        function u = U(obj, obs_pst, obs_fut)
+            [Ud,S,V] = svd(obs_pst);
+            s = diag(S);
+            % Efffective rank r of xeval_d
+            r = obj.effective_rank(s, obs_pst);
+            Ur = Ud(:,1:r);
+            Sr = diag(s(1:r));
+            Vr = V(:,1:r);
+            Dr = Sr\Ur'*obs_fut;
+
+            % fill dr with zeros in case r<d
+            % Dd = [Dr ; zeros(size(xeval_d,2)-r,size(xeval_d,2))];
+            u = Vr*Dr;
         end
     end
     methods (Static)
