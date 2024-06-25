@@ -25,12 +25,12 @@ figpath = "./pqEDMDm/examples/figures/";
 rng(1) % For consistency
 %%
 % define the parameters for the simulation
-num_ics = 6; % Number of initial conditions for the test
-ics_width = 4; % ics range width
+num_ics = 9; % Number of initial conditions for the test
+ics_width = 3; % ics range width
 % Create the initial conditions for the orbits
 ics = ics_width*rand(num_ics,2) - ics_width/2;
-tfin = 30;
-n_points = 20*tfin;
+tfin = 20;
+n_points = 601;
 %%
 % For the forced example I am only going to implement the duffing equation
 % with multistability
@@ -50,9 +50,8 @@ tas_o = repmat(struct('y', zeros(n_points + 1, 2), ...
 % I am saving the 't' time array only for plotting purposes. The algorithm
 % does not mind if that field is in there
 
-% Create the input signal. for simplicity, it will be a step response,
-% i.e., a constant input.
-in = 5*rand(num_ics, 1) + 5;
+% For the input, just a number, a frequency scaler
+in = 10*rand(num_ics, 1) + 3;
 % in = 2*rand(num_ics, 1) - 1;
 odeSettings = odeset('RelTol',1e-3,'AbsTol',1e-6);
 for orb = 1 : num_ics
@@ -64,24 +63,26 @@ for orb = 1 : num_ics
   % tas_o(orb).u = in(orb)*ones(size(tas_o(orb).t));%*cos(tas_o(orb).t);
   tas_o(orb).u = cos(in(orb)*tas_o(orb).t);
 end
-%%
-range = [-1,1];
-tas_n = dataset_normalization(tas_o,range);
+
+% Normalization 
+% range = [-1,1];
+% tas_n = dataset_normalization(tas_o,range);
 
 
 %%
 % Test the orthogonal pqEDMD
-tr = [1 3]; % index of training trajectories
-ts = [2 4 5 6];
+ts = [1 2]; % index of training trajectories
+tr = 1:num_ics;
+tr(ts) = [];
 % create the decomposition object
-tas_pq = pqEDMDm(p=[5 6 7 ], ...
-               q=[0.5 1 2], ...
+tas_pq = pqEDMDm(p=[4], ... [3 4 5] 
+               q=[1], ... [0.5 1 2]
                observable = @legendreObservable, ...
-               dyn_dcp = @svdDecomposition); % '' to use the ordinary least squares
-tas_ols = tas_pq.fit(tas_n(tr));
+               dyn_dcp = @sidDecomposition); % '' to use the ordinary least squares
+tas_ols = tas_pq.fit(tas_o(tr));
 % The new iteration of the algorithm does not need a tr_ts thing. Just feed
 % the ncessary training trajectories into the new fit function
-%
+% 
 %
 %%
 % test the prdiction with the first sample
@@ -96,31 +97,31 @@ tas_ols = tas_pq.fit(tas_n(tr));
 % preallocate
 err = zeros(numel(tas_ols),1);
 for decp = 1 : numel(tas_ols)
-  err(decp) = tas_ols(decp).error(tas_n(ts));
+  err(decp) = tas_ols(decp).error(tas_o(ts));
 end
 % where is the min?
 [~, best] = min(err);
 %%
 % best = 4;
-tas_p = tas_ols(best).pred_from_test(tas_n(ts));
-%%
+tas_p = tas_ols(best).pred_from_test(tas_o(ts));
+%
 % Plot
 tas_f = figure(1);
 clf
-lay_tas = tiledlayout(2,3,"TileSpacing","tight");
+lay_tas = tiledlayout(3,3,"TileSpacing","tight");
 for tr_i = 1 : numel(tr)
     nexttile(tr(tr_i))
-    plot(tas_n(tr(tr_i)).t, tas_n(tr(tr_i)).y, 'r')
+    plot(tas_o(tr(tr_i)).t, tas_o(tr(tr_i)).y, 'b')
 end
 for ts_i = 1 : numel(ts)
     nexttile(ts(ts_i))
     hold on
-    plot(tas_n(ts(ts_i)).t, tas_n(ts(ts_i)).y, 'b')
-    plot(tas_n(ts(ts_i)).t, tas_p(ts_i).y, '-.k')
+    plot(tas_o(ts(ts_i)).t, tas_o(ts(ts_i)).y, 'r')
+    plot(tas_o(ts(ts_i)).t, tas_p(ts_i).y, '-.k')
 end
 xlabel(lay_tas,'t','interpreter','latex')
 ylabel(lay_tas,'$x_1$,$x_2$','interpreter','latex')
-saveas(tas_f,strcat(figpath, "forced_duff.png"))
+% saveas(tas_f,strcat(figpath, "forced_duff.png")),
 % eigA = figure(2);
 % clf
 % hold on

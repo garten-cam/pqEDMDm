@@ -4,11 +4,11 @@ rng(1) % For consistency
 %%
 % define the parameters for the simulation
 num_ics = 10; % Number of initial conditions for the test
-ics_width = 10; % ics range width
+ics_width = 5; % ics range width
 % Create the initial conditions for the orbits
 ics = ics_width*rand(num_ics,2) - ics_width/2;
-tfin = 30;
-n_points = 301;
+tfin = 5;
+n_points = 51;
 %%
 % For the forced example I am only going to implement the duffing equation
 % with multistability
@@ -43,19 +43,17 @@ for orb = 1 : num_ics
   tas_o(orb).u = in(orb)*cos(in(orb)*tas_o(orb).t);
 end
 %%
-range = [-1,1];
-tas_n = dataset_normalization(tas_o,range);
-
+% range = [-1,1];
+% tas_n = dataset_normalization(tas_o,range);
 
 %%
 % Test the orthogonal pqEDMD
 tr = [1 2 3 4 5 6]; % index of training trajectories
-ts = [7 8 9 10];
-% create the decomposition object
-tas_pq = pqEDMDm(p=[2 3], ...
+ts = [7 8 9 10];% create the decomposition object
+tas_pq = pqEDMDm(p=[2 3 4], ...
   q=[1 2], ...
   observable = @legendreObservable, ...
-  dyn_dcp = @sid_alt_Decomposition); % '' to use the ordinary least squares
+  dyn_dcp = @sidOlsDecomposition); % '' to use the ordinary least squares
 tas_ols = tas_pq.fit(tas_o(tr));
 % The new iteration of the algorithm does not need a tr_ts thing. Just feed
 % the ncessary training trajectories into the new fit function
@@ -66,7 +64,7 @@ tas_ols = tas_pq.fit(tas_o(tr));
 % preallocate
 err = zeros(numel(tas_ols),1);
 for decp = 1 : numel(tas_ols)
-  err(decp) = tas_ols(decp).error(tas_o(ts));
+  err(decp) = tas_ols(decp).abs_error(tas_o(ts));
 end
 % where is the min?
 [~, best] = min(err)
@@ -85,8 +83,8 @@ lay_tas = tiledlayout(2,2,"TileSpacing","tight");
 for ts_i = 1 :4%numel(ts)
   nexttile(ts_i)
   hold on
-  plot(tas_n(ts(ts_i)).t, tas_o(ts(ts_i)).y, 'b')
-  plot(tas_n(ts(ts_i)).t, tas_p(ts_i).y, '-.k')
+  plot(tas_o(ts(ts_i)).t, tas_o(ts(ts_i)).y, 'b')
+  plot(tas_o(ts(ts_i)).t, tas_p(ts_i).y, '-.k')
 end
 xlabel(lay_tas,'t','interpreter','latex')
 ylabel(lay_tas,'$x_1$,$x_2$','interpreter','latex')
@@ -102,7 +100,7 @@ ylabel(lay_tas,'$x_1$,$x_2$','interpreter','latex')
 
 %%% Differential equation to solve
 function Dx = DuffEqODEu(t,X,P,u)
-%DuffEqODE
+%DuffEqODE 
 Dx1 = X(2);
 Dx2 = -P.delta*X(2) - P.alpha*X(1) - P.beta*X(1)^3 + u*cos(u*t);
 Dx = [Dx1;Dx2];

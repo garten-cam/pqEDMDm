@@ -52,10 +52,10 @@ tas_n = dataset_normalization(tas_o,range);
 tr = [1 2 3 4 5 6]; % index of training trajectories
 ts = [7 8 9 10];
 % create the decomposition object
-tas_pq = pqEDMDm(p=[2], ...
-  q=[1], ...
+tas_pq = pqEDMDm(p=[2 3], ...
+  q=[1 2], ...
   observable = @legendreObservable, ...
-  dyn_dcp = @sid_alt_Decomposition); % '' to use the ordinary least squares
+  dyn_dcp = @sidDecomposition); % '' to use the ordinary least squares
 tas_ols = tas_pq.fit(tas_n(tr));
 % The new iteration of the algorithm does not need a tr_ts thing. Just feed
 % the ncessary training trajectories into the new fit function
@@ -77,13 +77,13 @@ tas_p = tas_ols(best).pred_from_test(tas_n(ts));
 % Plot
 tas_f = figure(1);
 clf
-lay_tas = tiledlayout(2,3,"TileSpacing","tight");
-for tr_i = 1 : numel(tr)
-  nexttile(tr(tr_i))
-  plot(tas_n(tr(tr_i)).t, tas_n(tr(tr_i)).y, 'r')
-end
+lay_tas = tiledlayout(2,2,"TileSpacing","tight");
+% for tr_i = 1 : numel(tr)
+%   nexttile(tr(tr_i))
+%   plot(tas_n(tr(tr_i)).t, tas_n(tr(tr_i)).y, 'r')
+% end
 for ts_i = 1 : numel(ts)
-  nexttile(ts(ts_i))
+  nexttile(ts_i)
   hold on
   plot(tas_n(ts(ts_i)).t, tas_n(ts(ts_i)).y, 'b')
   plot(tas_n(ts(ts_i)).t, tas_p(ts_i).y, '-.k')

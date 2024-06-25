@@ -37,12 +37,9 @@ classdef pqDecomposition
     B % Input matrix              this one   ^
     C % Output matrix y = C*psi(x) + D*u
     D % Input Output matrix
-  end
-  
-  properties (Hidden)
-    l % Number of variables
+    l % Number of outputs, in this case original states
     m % Number of inputs
-    n % Number of states in this case, number of observables
+    n % Number of states, in this case, number of observables
   end
   methods
     function obj = pqDecomposition(observable, system)
@@ -80,10 +77,10 @@ classdef pqDecomposition
       end
     end
     function u = U(obj, obs_pst, obs_fut)
-        % Need this simple method here to inherit later
-        g = obs_pst'*obs_pst;
-        a = obs_pst'*obs_fut;
-        u = g/a;
+      % Need this simple method here to inherit later
+      g = obs_pst'*obs_pst;
+      a = obs_pst'*obs_fut;
+      u = g\a;
     end
     function a = matrix_A(obj, U)
       % get the A matrix from the system x = Ax
