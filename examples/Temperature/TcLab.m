@@ -28,20 +28,21 @@ sid_dcps = sidEDMD.fit(sm_n(tr));
 %
 err = arrayfun(@(dcp)dcp.error(sm_n(ts)),sid_dcps);
 % calculate the best trajectories
-[~, min_idx] = min(err);
+[~, best_dcp] = min(err);
 
 % Extract the best approximation
-sid_dcp = sid_dcps(min_idx);
+sid_dcp = sid_dcps(best_dcp);
 % Make the prediction of the test set
 sid_tst = sid_dcp.pred_from_test(sm_n(ts));
 % plot it
 figure(1)
 clf
 hold on
-trp_vv = arrayfun(@(trp){plot(trp.t,trp.y,'b')},sm_n(tr));
-tsp_vv = arrayfun(@(trp){plot(trp.t,trp.y,'r')},sm_n(ts));
-% app_v1 = arrayfun(@(tst,prd){plot(tst.t,prd.y(:,1),'-.k')},sm_n(ts),sid_tst);
-% app_v2 = arrayfun(@(tst,prd){plot(tst.t,prd.y(:,2),'-.k')},sm_n(ts),sid_tst);
+trp_vv = arrayfun(@(sam){plot(sam.t,sam.y,'b','LineWidth',2)},sm_n(tr));
+tsp_vv = arrayfun(@(sam){plot(sam.t,sam.y,'r','LineWidth',2)},sm_n(ts));
+app_v1 = arrayfun(@(tst,prd){plot(tst.t,prd.y(:,1),'-.k','LineWidth',2)},sm_n(ts),sid_tst);
+app_v2 = arrayfun(@(tst,prd){plot(tst.t,prd.y(:,2),'-.k','LineWidth',2)},sm_n(ts),sid_tst);
+in_set = arrayfun(@(sam){plot(sam.t,sam.u,'g','LineWidth',2)},sm_n)
 
 
 %%
