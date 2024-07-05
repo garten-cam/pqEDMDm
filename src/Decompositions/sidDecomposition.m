@@ -25,6 +25,7 @@ classdef sidDecomposition < svdDecomposition
 				obj.num_obs = size(obj.obs.polynomials_order, 2); % number of outputs, number of observables
 				% nunber of hankel blocks
 				obj.hl_bl = obj.hankel_blocks(yeval_sys);
+				% obj.hl_bl = 10;
 				% Hankelize, Notice the 2*hl_bl. Y?: The instrumental variables
 				% Ysid = [Yp;Yf]
 				Ysid = cell2mat(cellfun(@(x) ...
@@ -85,8 +86,10 @@ classdef sidDecomposition < svdDecomposition
 			[U, S] = obj.compute_svd(Ysid, Usid);
 			s = diag(S);
 			% Possible values of n up to the
-			max_n = min([obj.hl_bl,sum(s>1e-4)]);
+			% max_n = min([obj.hl_bl,sum(s>1e-4)]);
 			% max_n = max([obj.hl_bl,sum(s>5e-3)]);
+			% max_n = sum(s>0);
+			max_n = min(height(S),5*obj.num_obs);
 			ns = obj.num_obs:max_n;
 			nv = arrayfun(@(n)obj.n_cost(n, U, S, Ysid, Usid), ns);
 			[~, midx] = min(nv);
@@ -102,63 +105,7 @@ classdef sidDecomposition < svdDecomposition
 			[~,k,~,~] = idare(a',c',QQ,RR,SS); % Kalman filter ARE
 			k = k'; % Kalman gain
 		end
-		function [b, d] = BD(obj, y_eval, u_sys)
-			% Calculates the B matrix of the system. I will assume that D
-			% is zero, and see if I finally get a system that does not
-			% diverge.
-			if isempty(u_sys)
-				b = [];
-				d = [];
-				return
-			end
-			% The last approach goes back to the data, and the data, is noisy.
-			% instead, use the more effective approach Delgado
-			
-			% max samples
-			max_sam = max(cellfun(@(y_i)[size(y_i,1)],y_eval));
-			ac = obj.fullGamma(max_sam);
-			% Now, we need the kron prod of the input and the AC prod
-			% summed over all the available inputs in a trajectory
-			% preallocate
-			ukrac = cellfun(@(u_i){arrayfun(@(i){kron(zeros(1,size(u_i,2)),obj.C)},1:size(u_i,1))},u_sys);
-			% populate
-			for u_i = 1 : length(u_sys)
-				for u_blk = 1 : length(y_eval{u_i})
-					krcb = zeros([size(ukrac{u_i}{u_blk}), u_blk]);
-					for step = 1 : u_blk
-						krcb(:,:,step) = kron(u_sys{u_i}(step,:),ac{u_blk-step+1});
-					end
-					ukrac{u_i}{u_blk} = sum(krcb,3);
-				end
-			end
-			% Ok, I have the kroneckers, now I need the matrix
-			% All the trajectories have the same CA;;;CA^k matrix. but,
-			% truncated to the number of samples. so.........
-			% I have length(y_sys) number of blocks. in the right hand side
-			% Preallocate the blocks...
-			%------------------
-			rhsblk = cellfun(@(y_i){zeros(numel(y_i(2:end,:)),obj.n*(length(y_eval)+obj.m))},y_eval);
-			lhsblk = cellfun(@(y_i){reshape(y_i(2:end,:)',[],1)},y_eval);
-			for rhsbl_i = 1 : length(y_eval)
-				rhsblk{rhsbl_i}(:,1:obj.n*obj.m) = cell2mat(ukrac{rhsbl_i}(1:end-1)');
-				rhsblk{rhsbl_i}(:,obj.n*(rhsbl_i+obj.m-1)+1:obj.n*(rhsbl_i+obj.m)) = cell2mat(ac(2:size(y_eval{rhsbl_i},1))');
-			end
-			%--------
-			% rhsblk = cellfun(@(y_i){zeros(numel(y_i(1:end,:)),obj.n*(length(y_eval)+1))},y_eval);
-			% lhsblk = cellfun(@(y_i){reshape(y_i(1:end,:)',[],1)},y_eval);
-			% for rhsbl_i = 1 : length(y_eval)
-			%     rhsblk{rhsbl_i}(:,1:obj.n) = cell2mat(ukrac{rhsbl_i}(1:end)');
-			%     rhsblk{rhsbl_i}(:,obj.n*rhsbl_i+1:obj.n*(rhsbl_i+1)) = cell2mat(ac(1:end)');
-			% end
-			%-----------
-			rhs = cell2mat(rhsblk);
-			lhs = cell2mat(lhsblk);
-			% sol = rhs\lhs;
-			sol = obj.svd_solution(lhs, rhs);
-			% return the matrices
-			b = reshape(sol(1:obj.n*obj.m),obj.n,obj.m);
-			d = zeros(obj.num_obs,obj.m);
-		end
+		
 		function [b, d] = BDn(obj, Ysid, Usid)
 			% Calculates the B matrix of the system. I will assume that D
 			% is zero, and see if I finally get a system that does not
@@ -183,43 +130,39 @@ classdef sidDecomposition < svdDecomposition
 			Nk = obj.Nk(gmm, gam_inv, gmm_inv);
 			% Get the Uk matrices
 			Uk = arrayfun(@(bl){u_f(bl*obj.m+1:(bl+1)*obj.m,:)},0:obj.hl_bl-1)';
-			% Get the Kronecker sum, aka... the right hand side
-			kron_prod = cellfun(@(u_i,n_i){kron(u_i',n_i)},Uk,Nk);
-			sum_kron = sum(cat(3,kron_prod{:}),3);
+			% Sum over all kronecker products
+			sum_kron = obj.sum_kron(Uk,Nk);
 			% wee need thee Pee vectorized; vec(P) = vec([gmm_inv*zip;yii]-[A;C]*gam_inv*z_i)
-			% vec_P = (np.vstack((gmm_inv @ zpi, yii)) - np.vstack((self.A,
-			%          self.C)) @ gam_inv @ z_i).reshape((-1, 1), order='F')
 			vec_P = reshape([gmm_inv*zip;yii]-[obj.A;obj.C]*gam_inv*z_i,[],1);
-			DB = sum_kron\vec_P;
+			% DB = sum_kron\vec_P;
+			DB = obj.svd_solution(vec_P, sum_kron);
 			b=reshape(DB(obj.num_obs*obj.m+1:end),[],obj.m);
 			d=reshape(DB(1:obj.num_obs*obj.m),[],obj.m);
-			
 		end
 		function Nk =  Nk(obj, gmm, gam_inv, gmm_inv)
 			% Returns an array of Nk matrices
-			
 			% Get the La and Lc matrices for
 			La = obj.A*gam_inv;
 			Lc = obj.C*gam_inv;
-			
+			% Upper part of Gi
 			Gup = [eye(obj.num_obs) zeros(obj.num_obs, obj.n)];
+			% Lower part of Gi
 			Gbo = [zeros((obj.hl_bl-1)*obj.num_obs, obj.num_obs), gmm];
 			Gi = [Gup; Gbo];
 			% The Na matrices
 			% Na1 = [-La,1 M1-La,2 M2-La,3 ... M{hb-1}-La,hb)] hb=hl_bl
 			Na1 = [-La(:,1:obj.num_obs), gmm_inv - La(:,obj.num_obs+1:end)]*Gi;
 			% # All the remaining
-			Nai = arrayfun(@(bl){[gmm_inv(:,(bl-1)*obj.num_obs+1:end)-La(:,bl*obj.num_obs+1:end), zeros(obj.n,bl*obj.num_obs)]*Gi},2:obj.hl_bl)';
+			Nai = arrayfun(@(bl){[gmm_inv(:,(bl-1)*obj.num_obs+1:end)-La(:,bl*obj.num_obs+1:end), zeros(obj.n,bl*obj.num_obs)]*Gi},1:obj.hl_bl-1)';
 			% Get them into one cell
 			Na = [{Na1};Nai];
 			% for the Ncs...
-			Nc1 = [eye(obj.num_obs)-Lc(:,1:obj.num_obs), Lc(:,obj.num_obs+1:end)]*Gi;
+			Nc1 = [eye(obj.num_obs)-Lc(:,1:obj.num_obs), -Lc(:,obj.num_obs+1:end)]*Gi;
 			% All the remaining Ncs
-			Nci = arrayfun(@(bl){[-Lc(:,bl*obj.num_obs+1:end), zeros(obj.num_obs,bl*obj.num_obs)]*Gi},2:obj.hl_bl)';
+			Nci = arrayfun(@(bl){[-Lc(:,(bl-1)*obj.num_obs+1:end), zeros(obj.num_obs,(bl-1)*obj.num_obs)]*Gi},2:obj.hl_bl)';
 			Nc = [{Nc1};Nci];
 			% Reconcatenate Nci=[Nai;Nci]
 			Nk = cellfun(@(na,nc){[na;nc]},Na,Nc);
-			
 		end
 		function [u, s] = compute_svd(obj, Ysid, Usid)
 			% From the hankel matrices, calculate the oblique projection
@@ -260,6 +203,7 @@ classdef sidDecomposition < svdDecomposition
 				u = arrayfun(@(sys){sys.u},system);
 			end
 			% preallocate
+			% apparently, the result of an arrayfun inherits the shape of the iterable
 			pred = arrayfun(@(x) struct('sv', zeros(x, obj.n), ...
 				'y', zeros(x, obj.obs.l)), n_points);
 			
@@ -282,33 +226,34 @@ classdef sidDecomposition < svdDecomposition
 			end
 		end
 		function x0 = initial_condition(obj, sys)
-			obsf  = obj.obs.obs_function;
-			% points = length(sys.y);
-			points = obj.hl_bl;
-			ca = obj.fullGamma(points);% Gamma
-			if isfield(sys, "u")
-				cab = cellfun(@(ac){ac*obj.B},ca);%
-				% Now I need a sum per sample. where each is the same size as acb:
-				% preallocate with cab
-				cabu = cab;
-				for y_k = 1 : points
-					acbuk = zeros(obj.num_obs,y_k);
-					for step = 1 : y_k
-						acbuk(:,step) = cab{y_k-step+1}*sys.u(step,:)';
-					end
-					cabu{y_k} = sum(acbuk,2);
-				end
-			else
-				cabu = cellfun(@(ac){zeros(obj.num_obs,1)},ca);
-			end
-			
-			lhs = reshape(obsf(sys.y(2:points,:))',[],1) - cell2mat(cabu(1:points-1)');
-			rhs = cell2mat(ca(2:points)');
-			x0 = obj.svd_solution(lhs, rhs);
+			% obsf  = obj.obs.obs_function;
+			% % points = length(sys.y);
+			% points = obj.hl_bl;
+			% ca = obj.fullGamma(points);% Gamma
+			% if isfield(sys, "u")
+			% 	cab = cellfun(@(ac){ac*obj.B},ca);%
+			% 	% Now I need a sum per sample. where each is the same size as acb:
+			% 	% preallocate with cab
+			% 	cabu = cab;
+			% 	for y_k = 1 : points
+			% 	acbuk = zeros(obj.num_obs,y_k);
+			% 	for step = 1 : y_k
+			% 	acbuk(:,step) = cab{y_k-step+1}*sys.u(step,:)';
+			% 	end
+			% 	cabu{y_k} = sum(acbuk,2);
+			% 	end
+			% else
+			% 	cabu = cellfun(@(ac){zeros(obj.num_obs,1)},ca);
+			% end
+			%
+			% lhs = reshape(obsf(sys.y(2:points,:))',[],1) - cell2mat(cabu(1:points-1)');
+			% rhs = cell2mat(ca(2:points)');
+			% x0 = obj.svd_solution(lhs, rhs);
 			% fom this initial condition perform an optimization that finds
 			% a better point
 			% y = obj.C_edmd*(obj.C * x0);
 			% x0 = pinv(obj.C)*obsf(sys.y(1,:))';
+			x0 = pinv(obj.C)*(pinv(obj.C_edmd)*sys.y(1,:)'-obj.D*sys.u(1,:)');
 		end
 		function pred = pred_from_test(obj, system)
 			% predict all the xts for this decomposition:
@@ -316,8 +261,7 @@ classdef sidDecomposition < svdDecomposition
 			x0 = arrayfun(@(x) {obj.initial_condition(x)}, system);
 			% extract the numper of points per orbit
 			np = arrayfun(@(x) size(x.y,1), system);
-			% preallocate
-			% I have to deal with the inputs. This was wrong....
+			% make the prediction
 			pred = obj.predict(x0, np, system);
 		end
 		function err = error(obj, system)
@@ -375,7 +319,7 @@ classdef sidDecomposition < svdDecomposition
 			% calculate the number of blocks based on the available data
 			num_hl = (min_samples+1)*length(yeval);
 			den_hl = (2*(obj.num_obs + length(yeval)));
-			hlbl = floor(num_hl / den_hl); % Hankel blocks to use
+			hlbl = floor((num_hl / den_hl)/24); % Hankel blocks to use
 			% hlbl = floor((min_samples + 1)/(2*(obj.num_obs + 1))); % Hankel blocks to use
 		end
 		function [y_f, u_f, w_p, yfm, ufm, wpp] = fut_pst_mat(obj, Ysid, Usid)
@@ -390,6 +334,15 @@ classdef sidDecomposition < svdDecomposition
 		end
 	end
 	methods (Static)
+		function skp = sum_kron(uk, nk)
+			% Performs the kronecker product and the sum of all matrices for the
+			% solution of matrices B and D.
+			kron_prod = cellfun(@(u_i,n_i){kron(u_i',n_i)},uk,nk);
+			skp = zeros(size(kron_prod{1}));
+			for bl = 1 : length(kron_prod)
+				skp = skp + kron_prod{bl};
+			end
+		end
 		function zpox = zProjOx(z, x)
 			% zProjOx is the orthogonal projection of z onto the row pace
 			% of the orthogonal complement of x
@@ -405,7 +358,7 @@ classdef sidDecomposition < svdDecomposition
 		function zp_x = zProj_x(z, x)
 			% zProj_x is the orthogonal projection of z onto the row pace
 			% of x
-			% zpox = (z/x)
+			% zpox = (z/_x)
 			% p = size(z,1);
 			% [Q,R] = qr([x;z]', "econ");
 			% R = R';
@@ -427,3 +380,60 @@ classdef sidDecomposition < svdDecomposition
 		end
 	end % end static methods
 end % end class
+% function [b, d] = BD(obj, y_eval, u_sys)
+% 			% Calculates the B matrix of the system. I will assume that D
+% 			% is zero, and see if I finally get a system that does not
+% 			% diverge.
+% 			if isempty(u_sys)
+% 				b = [];
+% 				d = [];
+% 				return
+% 			end
+% 			% The last approach goes back to the data, and the data, is noisy.
+% 			% instead, use the more effective approach Delgado
+%
+% 			% max samples
+% 			max_sam = max(cellfun(@(y_i)[size(y_i,1)],y_eval));
+% 			ac = obj.fullGamma(max_sam);
+% 			% Now, we need the kron prod of the input and the AC prod
+% 			% summed over all the available inputs in a trajectory
+% 			% preallocate
+% 			ukrac = cellfun(@(u_i){arrayfun(@(i){kron(zeros(1,size(u_i,2)),obj.C)},1:size(u_i,1))},u_sys);
+% 			% populate
+% 			for u_i = 1 : length(u_sys)
+% 				for u_blk = 1 : length(y_eval{u_i})
+% 					krcb = zeros([size(ukrac{u_i}{u_blk}), u_blk]);
+% 					for step = 1 : u_blk
+% 						krcb(:,:,step) = kron(u_sys{u_i}(step,:),ac{u_blk-step+1});
+% 					end
+% 					ukrac{u_i}{u_blk} = sum(krcb,3);
+% 				end
+% 			end
+% 			% Ok, I have the kroneckers, now I need the matrix
+% 			% All the trajectories have the same CA;;;CA^k matrix. but,
+% 			% truncated to the number of samples. so.........
+% 			% I have length(y_sys) number of blocks. in the right hand side
+% 			% Preallocate the blocks...
+% 			%------------------
+% 			rhsblk = cellfun(@(y_i){zeros(numel(y_i(2:end,:)),obj.n*(length(y_eval)+obj.m))},y_eval);
+% 			lhsblk = cellfun(@(y_i){reshape(y_i(2:end,:)',[],1)},y_eval);
+% 			for rhsbl_i = 1 : length(y_eval)
+% 				rhsblk{rhsbl_i}(:,1:obj.n*obj.m) = cell2mat(ukrac{rhsbl_i}(1:end-1)');
+% 				rhsblk{rhsbl_i}(:,obj.n*(rhsbl_i+obj.m-1)+1:obj.n*(rhsbl_i+obj.m)) = cell2mat(ac(2:size(y_eval{rhsbl_i},1))');
+% 			end
+% 			%--------
+% 			% rhsblk = cellfun(@(y_i){zeros(numel(y_i(1:end,:)),obj.n*(length(y_eval)+1))},y_eval);
+% 			% lhsblk = cellfun(@(y_i){reshape(y_i(1:end,:)',[],1)},y_eval);
+% 			% for rhsbl_i = 1 : length(y_eval)
+% 			%     rhsblk{rhsbl_i}(:,1:obj.n) = cell2mat(ukrac{rhsbl_i}(1:end)');
+% 			%     rhsblk{rhsbl_i}(:,obj.n*rhsbl_i+1:obj.n*(rhsbl_i+1)) = cell2mat(ac(1:end)');
+% 			% end
+% 			%-----------
+% 			rhs = cell2mat(rhsblk);
+% 			lhs = cell2mat(lhsblk);
+% 			% sol = rhs\lhs;
+% 			sol = obj.svd_solution(lhs, rhs);
+% 			% return the matrices
+% 			b = reshape(sol(1:obj.n*obj.m),obj.n,obj.m);
+% 			d = zeros(obj.num_obs,obj.m);
+% 		end

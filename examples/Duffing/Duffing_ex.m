@@ -7,7 +7,7 @@ ics_width = 4; % ics range width
 % Create the initial conditions for the orbitst
 ics = ics_width*rand(num_ics,2) - ics_width/2;
 tfin = 30;
-n_points = 301;
+n_points = 901;
 % Two asymptotically stable points response
 % parameters
 tas.alpha = -1;
@@ -19,17 +19,17 @@ tas.delta = 0.5;
 % %
 % preallocate the structure of tas orbits
 tas_o = repmat(struct('y', zeros(n_points, 2), ...
-  't', zeros(n_points, 1)), num_ics,1);
+	't', zeros(n_points, 1)), num_ics,1);
 % I am saving the 't' time array only for plotting purposes. The algorithm
 % does not mind if that field is in there
 
 % Loop for all initial conditions
 odeSettings = odeset('RelTol',1e-3,'AbsTol',1e-6);
 for orb = 1 : num_ics
-  [tas_o(orb).t, tas_o(orb).y] = ode23(@(t,x)DuffEqODE(t,x,tas),...
-    linspace(0,tfin,n_points), ...
-    ics(orb,:), ...
-    odeSettings);
+	[tas_o(orb).t, tas_o(orb).y] = ode23(@(t,x)DuffEqODE(t,x,tas),...
+		linspace(0,tfin,n_points), ...
+		ics(orb,:), ...
+		odeSettings);
 end
 
 
@@ -40,15 +40,15 @@ tr = [1, 2, 4, 6, 8, 9]; % index of training trajectories
 ts = [3 5 7];
 % create the decomposition object
 tas_pq = pqEDMDm(p=[2 3], ...
-  q=[0.5 1 1.5 2], ...
-  observable = @legendreObservable, ...
-  dyn_dcp = @sidDecomposition); % '' to use the ordinary least squares
+	q=[0.5 1 1.5 2], ...
+	observable = @legendreObservable, ...
+	dyn_dcp = @sidDecomposition); % '' to use the ordinary least squares
 tas_ols = tas_pq.fit(tas_o(tr));
 %%
 % Get the best performing decomposition
 err = zeros(numel(tas_ols),1);
 for decp = 1 : numel(tas_ols)
-  err(decp) = tas_ols(decp).error(tas_o(ts));
+	err(decp) = tas_ols(decp).error(tas_o(ts));
 end
 
 [~, best] = min(err);
@@ -65,15 +65,15 @@ tas_f = figure(1);
 clf
 hold on
 for tr_i = 1 : numel(tr)
-  plot(tas_o(tr(tr_i)).y(:,1), tas_o(tr(tr_i)).y(:,2), 'b')
+	plot(tas_o(tr(tr_i)).y(:,1), tas_o(tr(tr_i)).y(:,2), 'b')
 end
 for ts_i = 1 : numel(ts)
-  plot(tas_o(ts(ts_i)).y(:,1), tas_o(ts(ts_i)).y(:,2), 'r')
+	plot(tas_o(ts(ts_i)).y(:,1), tas_o(ts(ts_i)).y(:,2), 'r')
 end
 axis([-2.1 2.1 -2.1 2.1])
 %saveas(tas_f,strcat(figpath, "tr_ts.png"))
 for ts_i = 1 : numel(ts)
-  plot(tas_approx(ts_i).y(:,1),tas_approx(ts_i).y(:,2), '.k')
+	plot(tas_approx(ts_i).y(:,1),tas_approx(ts_i).y(:,2), '.k')
 end
 %saveas(tas_f,strcat(figpath, "approx.png"))
 

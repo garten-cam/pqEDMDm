@@ -20,12 +20,12 @@
 % WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 % FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 % OTHER DEALINGS IN THE SOFTWARE.
-figpath = "./pqEDMDm/examples/figures/";
+% figpath = "./pqEDMDm/examples/figures/";
 % Example to work with forcing sgnals
 rng(1) % For consistency
 %%
 % define the parameters for the simulation
-num_ics = 9; % Number of initial conditions for the test
+num_ics = 12; % Number of initial conditions for the test
 ics_width = 3; % ics range width
 % Create the initial conditions for the orbits
 ics = ics_width*rand(num_ics,2) - ics_width/2;
@@ -36,35 +36,34 @@ n_points = 601;
 % with multistability
 % Two asymptotically stable points response
 % parameters
-tas.alpha = -1;
-tas.beta = 1;
-tas.delta = 0.5;
+duffor.alpha = -1;
+duffor.beta = 1;
+duffor.delta = 0.5;
 % The pqEDMD class accepts a structire array where the only necessary field
 % in the state variables. It is not a tensor, because not all the
 % trajectories are of the same lenght.
 
-% preallocate the structure of tas orbits
-tas_o = repmat(struct('y', zeros(n_points + 1, 2), ...
-  'u', zeros(n_points + 1, 2),... forcing signals
-  't', zeros(n_points + 1, 1)), num_ics,1);
-% I am saving the 't' time array only for plotting purposes. The algorithm
-% does not mind if that field is in there
+% preallocate the structure of the experiments
+duff_exp = arrayfun(@(z)struct('y', zeros(n_points, 2), ...
+	'u', zeros(n_points, 2),... forcing signals
+	't', zeros(n_points, 1)), 1:num_ics)';
 
 % For the input, just a number, a frequency scaler
-in = 10*rand(num_ics, 1) + 3;
+omega_in = 10*rand(num_ics, 1) + 3;
+in = arrayfun(@(om_in)struct('omega',om_in,'gamma',1),omega_in);
 % in = 2*rand(num_ics, 1) - 1;
 odeSettings = odeset('RelTol',1e-3,'AbsTol',1e-6);
 for orb = 1 : num_ics
-  [tas_o(orb).t, tas_o(orb).y] = ode23(@(t,x)DuffEqODEu(t,x,tas, ...
-    in(orb)),...
-    0:tfin/n_points:tfin, ...
-    ics(orb,:), ...
-    odeSettings);
-  % tas_o(orb).u = in(orb)*ones(size(tas_o(orb).t));%*cos(tas_o(orb).t);
-  tas_o(orb).u = cos(in(orb)*tas_o(orb).t);
+	[duff_exp(orb).t, duff_exp(orb).y] = ode23(@(t,x)DuffEqODEu(t,x,duffor, ...
+		in(orb)),...
+		linspace(0,tfin,n_points), ...
+		ics(orb,:), ...
+		odeSettings);
+	% tas_o(orb).u = in(orb)*ones(size(tas_o(orb).t));%*cos(tas_o(orb).t);
+	duff_exp(orb).u = in(orb).gamma*cos(in(orb).omega*duff_exp(orb).t);
 end
 
-% Normalization 
+% Normalization
 % range = [-1,1];
 % tas_n = dataset_normalization(tas_o,range);
 
@@ -75,14 +74,14 @@ ts = [1 2]; % index of training trajectories
 tr = 1:num_ics;
 tr(ts) = [];
 % create the decomposition object
-tas_pq = pqEDMDm(p=[4], ... [3 4 5] 
-               q=[1], ... [0.5 1 2]
-               observable = @legendreObservable, ...
-               dyn_dcp = @sidDecomposition); % '' to use the ordinary least squares
-tas_ols = tas_pq.fit(tas_o(tr));
+tas_pq = pqEDMDm(p=[2 3 4], ... [3 4 5]
+	q=[0.5 1 1.3], ... [0.5 1 2]
+	observable = @legendreObservable, ...
+	dyn_dcp = @sidDecomposition); % '' to use the ordinary least squares
+tas_ols = tas_pq.fit(duff_exp(tr));
 % The new iteration of the algorithm does not need a tr_ts thing. Just feed
 % the ncessary training trajectories into the new fit function
-% 
+%
 %
 %%
 % test the prdiction with the first sample
@@ -97,27 +96,27 @@ tas_ols = tas_pq.fit(tas_o(tr));
 % preallocate
 err = zeros(numel(tas_ols),1);
 for decp = 1 : numel(tas_ols)
-  err(decp) = tas_ols(decp).error(tas_o(ts));
+	err(decp) = tas_ols(decp).error(duff_exp(ts));
 end
 % where is the min?
 [~, best] = min(err);
 %%
 % best = 4;
-tas_p = tas_ols(best).pred_from_test(tas_o(ts));
+tas_p = tas_ols(best).pred_from_test(duff_exp(ts));
 %
 % Plot
 tas_f = figure(1);
 clf
-lay_tas = tiledlayout(3,3,"TileSpacing","tight");
+lay_tas = tiledlayout(4,3,"TileSpacing","tight");
 for tr_i = 1 : numel(tr)
-    nexttile(tr(tr_i))
-    plot(tas_o(tr(tr_i)).t, tas_o(tr(tr_i)).y, 'b')
+	nexttile(tr(tr_i))
+	plot(duff_exp(tr(tr_i)).t, duff_exp(tr(tr_i)).y, 'b')
 end
 for ts_i = 1 : numel(ts)
-    nexttile(ts(ts_i))
-    hold on
-    plot(tas_o(ts(ts_i)).t, tas_o(ts(ts_i)).y, 'r')
-    plot(tas_o(ts(ts_i)).t, tas_p(ts_i).y, '-.k')
+	nexttile(ts(ts_i))
+	hold on
+	plot(duff_exp(ts(ts_i)).t, duff_exp(ts(ts_i)).y, 'r')
+	plot(duff_exp(ts(ts_i)).t, tas_p(ts_i).y, '-.k')
 end
 xlabel(lay_tas,'t','interpreter','latex')
 ylabel(lay_tas,'$x_1$,$x_2$','interpreter','latex')
@@ -129,28 +128,3 @@ ylabel(lay_tas,'$x_1$,$x_2$','interpreter','latex')
 % scatter(real(eig(tas_ols(best).A)),imag(eig(tas_ols(best).A)),"filled")
 % Even though the convergence is not perfect, this apprximation should be
 % enough for control.
-
-
-%%% Differential equation to solve
-function Dx = DuffEqODEu(t,X,P,u)
-%DuffEqODE
-Dx1 = X(2);
-Dx2 = -P.delta*X(2) - P.alpha*X(1) - P.beta*X(1)^3 + cos(u*t);
-Dx = [Dx1;Dx2];
-end
-
-function data_n = dataset_normalization(data,range)
-%  It is necessary to normalize. Get the normalization according to the
-%  complete dataset
-[~,y.ctr,y.scl] = normalize(cell2mat({data.y}'),"range",[-1,1]);
-% the same for the input
-[~,u.ctr,u.scl] = normalize(cell2mat({data.u}'),"range",range);
-% apply the normalization to every sample. according t the center and the
-% scale
-data_n = arrayfun(@(x) struct('y', normalize(x.y,"center",y.ctr, ...
-  "scale",y.scl), ...
-  'u', normalize(x.u,"center",u.ctr, ...
-  "scale",u.scl), ...
-  't', x.t),data); % keep the time as is
-
-end

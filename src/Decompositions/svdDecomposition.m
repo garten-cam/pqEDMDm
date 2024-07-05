@@ -64,9 +64,7 @@ classdef svdDecomposition < pqDecomposition
       Sr = diag(s(1:r));
       Vr = V(:,1:r);
       Dr = Sr\Ur'*lhs;
-
-      % fill dr with zeros in case r<d
-      % Dd = [Dr ; zeros(size(xeval_d,2)-r,size(xeval_d,2))];
+      % solve it
       u = Vr*Dr;
     end
   end
