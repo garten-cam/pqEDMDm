@@ -6,7 +6,7 @@ num_ics = 10;
 % For this example, the initial conditions will be in the lower left corner. This exemplifies a low species and substrate concentration at the beginning of the experiment
 ics = [(0.1-0.05)*rand(num_ics, 1)+0.05, (0.2-0.01)*rand(num_ics, 1)+0.01];
 %
-tfin = 60;
+tfin = 40;
 n_points = 1*tfin+1;
 %
 in = (0.16-0.1)*rand(num_ics, 1)+0.1;

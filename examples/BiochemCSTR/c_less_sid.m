@@ -6,8 +6,8 @@ num_ics = 10;
 % For this example, the initial conditions will be in the lower left corner. This exemplifies a low species and substrate concentration at the beginning of the experiment
 ics = [(0.1-0.05)*rand(num_ics, 1)+0.05, (0.2-0.01)*rand(num_ics, 1)+0.01];
 %
-tfin = 50;
-n_points = 30*tfin+1;
+tfin = 40;
+n_points = 1*tfin+1;
 in = (0.16-0.1)*rand(num_ics, 1)+0.1;
 % preallocate the array of structures
 exp = arrayfun(@(z)struct('y', zeros(n_points, 2), ...
@@ -29,13 +29,14 @@ exp_n = normalize_data(exp,[-1,1]);
 
 % Define the same wrapper. As the other script
 sid_edmd = pqEDMDm( ...
-	p = [1 2 3],...
+	p = [2 3 4],...
 	q = [0.5 0.8 1 1.5],...
 	observable = @legendreObservable,...
 	dyn_dcp = @sidDecomposition...
 	);
 % set the training and testing sets
 tr = [1 2 6 7 8 9];
+% tr = [1 2];
 ts = [3 4 5 10];
 % fit it to the training set
 sid_dcps = sid_edmd.fit(exp_n(tr));
@@ -57,3 +58,4 @@ trp = arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'b','LineWidth',2),exp_n(tr));
 tsp = arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'r','LineWidth',2),exp_n(ts));
 % and the approxx
 sip = arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'-.k','LineWidth',2),sid_pred);
+

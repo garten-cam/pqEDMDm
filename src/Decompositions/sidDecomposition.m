@@ -317,10 +317,11 @@ classdef sidDecomposition < svdDecomposition
 			% Stablish the number of Hankel blocks
 			% hlbl = floor(((min_samples)/((2*obj.num_obs*numel(xeval_sys))))); % Hankel blocks to use
 			% calculate the number of blocks based on the available data
-			num_hl = (min_samples+1)*length(yeval);
-			den_hl = (2*(obj.num_obs + length(yeval)));
-			hlbl = floor((num_hl / den_hl)/24); % Hankel blocks to use
+			% num_hl = (min_samples+1)*length(yeval);
+			% den_hl = (2*(obj.num_obs + length(yeval)));
+			% hlbl = floor((num_hl / den_hl)/24); % Hankel blocks to use
 			% hlbl = floor((min_samples + 1)/(2*(obj.num_obs + 1))); % Hankel blocks to use
+			hlbl = floor((min_samples + 1)/(obj.num_obs + 2));
 		end
 		function [y_f, u_f, w_p, yfm, ufm, wpp] = fut_pst_mat(obj, Ysid, Usid)
 			% y_f: y_{future} the lower half of the y hankel matrix

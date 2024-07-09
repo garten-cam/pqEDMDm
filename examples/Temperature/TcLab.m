@@ -22,7 +22,7 @@ tr = [1, 2, 4, 6];
 
 sidEDMD = pqEDMDm(p=[4 5],q=[1.2 1.5], ...
 	observable = @legendreObservable, ...
-	dyn_dcp = @svdDecomposition);
+	dyn_dcp = @sidDecomposition);
 %%
 sid_dcps = sidEDMD.fit(sm_n(tr));
 %
@@ -42,7 +42,7 @@ trp_vv = arrayfun(@(sam){plot(sam.t,sam.y,'b','LineWidth',2)},sm_n(tr));
 tsp_vv = arrayfun(@(sam){plot(sam.t,sam.y,'r','LineWidth',2)},sm_n(ts));
 app_v1 = arrayfun(@(tst,prd){plot(tst.t,prd.y(:,1),'-.k','LineWidth',2)},sm_n(ts),sid_tst);
 app_v2 = arrayfun(@(tst,prd){plot(tst.t,prd.y(:,2),'-.k','LineWidth',2)},sm_n(ts),sid_tst);
-in_set = arrayfun(@(sam){plot(sam.t,sam.u,'g','LineWidth',2)},sm_n)
+in_set = arrayfun(@(sam){plot(sam.t,sam.u,'g','LineWidth',2)},sm_n);
 
 
 %%
