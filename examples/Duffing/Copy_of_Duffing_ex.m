@@ -2,12 +2,12 @@ figpath = "./pqEDMDm/examples/figures/";
 % for numerical consistency
 rng(1)
 % define the parameters for the simulation
-num_ics = 6; % Number of initial conditions for the test
+num_ics = 10; % Number of initial conditions for the test
 ics_width = 4; % ics range width
 % Create the initial conditions for the orbitst
 ics = ics_width*rand(num_ics,2) - ics_width/2;
 tfin = 30;
-n_points = 2*tfin + 1;
+n_points = 10*tfin + 1;
 % Two asymptotically stable points response
 % parameters
 tas.alpha = -1;
@@ -32,22 +32,17 @@ for orb = 1 : num_ics
 		odeSettings);
 end
 
-% two_nrm = normalize_data(two_as,[-1,1]);
-two_nrm = two_as;
+two_nrm = normalize_data(two_as,[-1,1]);
+% two_nrm = two_as;
   
 
 
 %%
 % Test the orthogonal pqEDMD
-ts = [2 4 5 6]; % index of training trajectories
-tr = [1 3];
+ts = [1 2]; % index of training trajectories
+tr = [3 4 5 6 7 8 9 10];
 % create the decomposition object
-% tas_pq = pqEDMDm(p=[2 3 4 5], ...
-% 	q=[0.5 1 1.5 2], ...
-% 	observable = @legendreObservable, ...
-% 	dyn_dcp = @(obs,sys)sidDecomposition(5,0,obs,sys)); % '' to use the ordinary least squares
-% dcps = tas_pq.fit(two_nrm(tr));
-tas_pq = pqEDMDm(p=[2 3 4 5], ... 
+tas_pq = pqEDMDm(p=[2 3 4 5], ...
 	q=[0.5 1 1.5 2], ...
 	observable = @legendreObservable, ...
 	dyn_dcp = @svdDecomposition); % '' to use the ordinary least squares
@@ -62,8 +57,13 @@ end
 [~, best] = min(err);
 dcp = dcps(best);
 
+% Compare the prediction of the best performing prediction with
+% the test set 
+
+
 appx = dcp.pred_from_test(two_nrm(ts));
 
+%
 tas_f = figure(1);
 clf
 hold on

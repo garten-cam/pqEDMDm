@@ -1,37 +1,11 @@
-% Author - Camilo Garcia-Tenorio Ph.D.
-% MIT License
-
-% Copyright (c) 2023 Camilo Garcia-Tenorio
-%
-% Permission is hereby granted, free of charge, to any person obtaining a copy of this
-% software and associated documentation files (the "Software"), to deal in the Software
-% without restriction, including without limitation the rights to use, copy, modify, merge,
-% publish, distribute, sublicense, and/or sell copies of the Software, and to permit
-% persons to whom the Software is furnished to do so, subject to the following conditions:
-%
-% The above copyright notice and this permission notice shall be included in all copies or
-% substantial portions of the Software.
-
-% THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-% EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-% OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-% NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-% HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-% WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-% FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-% OTHER DEALINGS IN THE SOFTWARE.
 classdef pqDecomposition
-  %DECOMPOSITION parent class for all the decompositions.
+  %PQDECOMPOSITION parent class for all the decompositions.
   %
   % Returns a set of matrices characterizing a system based on the pqEDMD
-  % algorithm.
-  %
-  %
-  
+  % algorithm.  
   properties % input properties
     obs % input property of every decomposition. The observable
   end
-  
   properties % calculated properties
     A % Evolution Matrix psi(x) = A*psi(x) + B*u
     B % Input matrix              this one   ^
@@ -40,11 +14,16 @@ classdef pqDecomposition
     l % Number of outputs, in this case original states
     m % Number of inputs
     n % Number of states, in this case, number of observables
+    num_obs % Number of observables
   end
   methods
     function obj = pqDecomposition(observable, system)
-      %DECOMPOSITION Construct an instance of this class
-      %   Detailed explanation goes here
+      %PQDECOMPOSITION Class constructor. Recieves an observable and a set
+      %of trajectories/experimets/samples and  returns the A, B, and C
+      %matrices of an EDMD.
+      %
+      % According to the observable function $\Psi$,
+      %
       if nargin > 0
         
         obj.obs = observable; % saves the observable object
@@ -59,7 +38,7 @@ classdef pqDecomposition
         else
           obj.m = 0;
         end
-        
+        obj.num_obs = size(obj.obs.polynomials_order, 2);
         % from the snapshots, get the regression
         
         U = obj.U(obs_pst, obs_fut); % This is the transpose of U
@@ -112,11 +91,15 @@ classdef pqDecomposition
       
       obsf = obj.obs.obs_function;
       for orb = 1 : size(y0,1) % For all the initial conditions
+        % Just save the initial output
         pred(orb).y(1,:) = y0(orb,:);
         for step = 2 : n_points(orb)
+          % Lift the previous output
           x_prev = [1 obsf(pred(orb).y(step-1,:))];
-          x_post = obj.A*x_prev' + obj.B*u{orb}(step-1,:)';
-          pred(orb).y(step,:) = (obj.C*x_post + obj.D*u{orb}(step-1,:)')';
+          % Evolve the "state"
+          x_post = obj.A*x_prev' + obj.B*u{orb}(step,:)';
+          % Apply the output function
+          pred(orb).y(step,:) = (obj.C*x_post + obj.D*u{orb}(step,:)')';
         end
       end
     end
@@ -142,17 +125,16 @@ classdef pqDecomposition
         sum(abs(y.y-hy.y),"all")/length(y.y)/obj.obs.l,...
         yts,pred))/numel(yts);
     end
-    function pred = pred_from_test(obj, xts)
+    function pred = pred_from_test(obj, system)
       % predict all the xts for this decomposition:
       % extract the initial conditions
-      y0 = cell2mat(arrayfun(@(x) x.y(1, :), xts, ...
-        'UniformOutput', false));
+      y0 = cell2mat(arrayfun(@(x) {x.y(1, :)}, system));
       % extract the numper of points per orbit
-      np = arrayfun(@(x) size(x.y,1), xts);
+      np = arrayfun(@(x) size(x.y,1), system);
       % preallocate
       % I have to deal with the inputs. This was wrong....
-      if isfield(xts, "u")
-        pred = obj.predict(y0, np, {xts.u});
+      if isfield(system, "u")
+        pred = obj.predict(y0, np, {system.u});
       else
         pred = obj.predict(y0, np);
       end

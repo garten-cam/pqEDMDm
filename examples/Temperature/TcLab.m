@@ -5,24 +5,32 @@ dyndata = table2array(dyndata);
 % Retrieve the samples
 s_ii = linspace(1,501,6);
 s_if = linspace(100,600,6);
-% some random numbers to make the trajectories of different lenghts
+% % some random numbers to make the trajectories of different lenghts
 shift = [-8 -4 1 10 10];%%
 s_ii(2:6) = s_ii(2:6) + shift;
 s_if(1:5) = s_if(1:5) + shift;
+%
+% New approach, single trajectory for training last part for testing
+% s_ii = [1, 501];
+% s_if = [500, 600];
 samples = arrayfun(@(i,f)[struct('t',dyndata(i:f,1), ...
 	'y',dyndata(i:f,4:5), ...
 	'u',dyndata(i:f,2:3))],s_ii,s_if)';
 
+
 % Normalize the data
 sm_n = normalize_data(samples,[-1,1]);
+% sm_n = samples;   
 
 % Trainin and testing
-ts = [3, 5];
-tr = [1, 2, 4, 6];
+ts = [4];
+% ts = 3;
+tr = [1, 2, 3, 5, 6];
+% tr = 1;
 
-sidEDMD = pqEDMDm(p=[4 5],q=[1.2 1.5], ...
-	observable = @legendreObservable, ...
-	dyn_dcp = @sidDecomposition);
+sidEDMD = pqEDMDm(p=[2 3 4],q=[0.5 1 1.5], ...
+	observable = @hermiteObservable, ...
+	dyn_dcp = @svdDecomposition);%@(o,s)sidDecomposition(8,2,o,s));
 %%
 sid_dcps = sidEDMD.fit(sm_n(tr));
 %
@@ -42,36 +50,5 @@ trp_vv = arrayfun(@(sam){plot(sam.t,sam.y,'b','LineWidth',2)},sm_n(tr));
 tsp_vv = arrayfun(@(sam){plot(sam.t,sam.y,'r','LineWidth',2)},sm_n(ts));
 app_v1 = arrayfun(@(tst,prd){plot(tst.t,prd.y(:,1),'-.k','LineWidth',2)},sm_n(ts),sid_tst);
 app_v2 = arrayfun(@(tst,prd){plot(tst.t,prd.y(:,2),'-.k','LineWidth',2)},sm_n(ts),sid_tst);
-in_set = arrayfun(@(sam){plot(sam.t,sam.u,'g','LineWidth',2)},sm_n);
-
-
-%%
-% plots....
-figure(1)
-clf
-hold on
-for cyc = tr
-	trp = plot(samples(cyc).t,samples(cyc).y,'b');
-	plot(samples(cyc).t,samples(cyc).u,'g')
-end
-for cyc = 1:length(ts)
-	tsp = plot(samples(ts(cyc)).t,samples(ts(cyc)).y,'r');
-	tst = plot(samples(ts(cyc)).t,testR(cyc).y,'k');
-	plot(samples(ts(cyc)).t,samples(ts(cyc)).u,'g')
-end
-title('Robust')
-figure(2)
-clf
-hold on
-for cyc = tr
-	trp = plot(samples(cyc).t,samples(cyc).y,'b');
-	plot(samples(cyc).t,samples(cyc).u,'g')
-end
-for cyc = 1:length(ts)
-	tsp = plot(samples(ts(cyc)).t,samples(ts(cyc)).y,'r');
-	tst = plot(samples(ts(cyc)).t,testO(cyc).y,'k');
-	plot(samples(ts(cyc)).t,samples(ts(cyc)).u,'g')
-end
-title('Ols')
-
-
+in_ht1 = arrayfun(@(sam){plot(sam.t,sam.u(:,1),'g','LineWidth',2)},sm_n);
+in_ht2 = arrayfun(@(sam){plot(sam.t,sam.u(:,2),'m','LineWidth',1.5)},sm_n);

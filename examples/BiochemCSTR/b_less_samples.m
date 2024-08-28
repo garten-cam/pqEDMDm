@@ -1,5 +1,6 @@
-% Script for continuing the simulation of the bioreactor.
+%u Script for continuing the simulation of the bioreactor.
 % This time, we will have more "realistic" initial conditions
+clear variables
 rng(4321)
 % Define the parameters for the simulation
 num_ics = 10;
@@ -79,13 +80,13 @@ for orb = 1 : num_ics
 		linspace(0,tfin,n_points), ...
 		ics(orb,:), ...
 		odeSettings);
-	exp_stch(orb).y = exp_stch(orb).y_cl + normrnd(0,.01,size(exp_stch(orb).y));
+	exp_stch(orb).y = exp_stch(orb).y_cl + normrnd(0,.005,size(exp_stch(orb).y));
 	exp_stch(orb).u = in(orb)*ones(size(exp(orb).t));
 end
 % Normalize the experiments
 exp_nstch = normalize_data(exp_stch,[-1,1]);
 pen_edmd_stch = pqEDMDm( ...
-	p = [2 4 5 6],...
+	p = [2 4 5],...
 	q = [0.5 1 1.5 2.0 2.5],...
 	observable = @legendreObservable,...
 	dyn_dcp = @svdDecomposition...
@@ -116,36 +117,4 @@ xlabel('$x_1$',Interpreter='latex')
 ylabel('$x_2$', Interpreter='latex')
 legend([trp(1), tsp(1), tsa(1)],{'training','testing','pqEDMD'},"Location","best")
 title("pqEDMD appx")
-%%
-% It is nice, but, can we do better?
-% Create a pqEDMD with sidDecomposition
-% sid_edmd = pqEDMDm( ...
-% 	p = [2 3 4 5],...
-% 	q = [0.5 1 1.5 2.0 2.5],...
-% 	observable = @legendreObservable,...
-% 	dyn_dcp = @sidDecomposition...
-% 	);
-% % With the new sid decomposition, the approximation becomes
-% sid_dcps = sid_edmd.fit(exp_stch(tr));
-% % Calculate the error
-% sid_err = arrayfun(@(dcp)dcp.error(exp_stch(ts)),sid_dcps);
-% % whos the best
-% [sid_min, sid_bt] = min(sid_err);
-% % extract the best
-% sid_dcp = sid_dcps(sid_bt);
-% % Make the prediction from the test set
-% sid_pred = sid_dcp.pred_from_test(exp_stch(ts));
-% % Plot
-% sid_fig = figure(6);
-% % instead of a phase plane, use a grid
-% clf
-% hold on
-% sid_trp = arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'b','LineWidth',2),exp_stch(tr));
-% % Plot the testing set
-% sid_tsp = arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'r','LineWidth',2),exp_stch(ts));
-% % Plot the testing approximation
-% sid_ts = arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'-.k','LineWidth',2),sid_pred);
-% xlabel('$x_1$',Interpreter='latex')
-% ylabel('$x_2$', Interpreter='latex')
-% legend([trp(1), tsp(1), sid_ts(1)],{'training','testing','pqEDMD'},"Location","best")
-% title("sidEDMD appx")
+

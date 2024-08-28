@@ -1,7 +1,7 @@
 function [data_n, y, u] = normalize_data(data,range)
 %  It is necessary to normalize. Get the normalization according to the
 %  complete dataset
-[~,y.ctr,y.scl] = normalize(cell2mat({data.y}'),"range",[-1,1]);
+[~,y.ctr,y.scl] = normalize(cell2mat({data.y}'),"range",range);
 % the same for the input
 if isfield(data,"u")
   [~,u.ctr,u.scl] = normalize(cell2mat({data.u}'),"range",range);
@@ -17,7 +17,7 @@ if isfield(data,'u')
 else
   data_n = arrayfun(@(x) struct('y', normalize(x.y,"center",y.ctr,...
     "scale",y.scl),...
-    't',x.t,data));
+    't',x.t),data);
 end
 
 end

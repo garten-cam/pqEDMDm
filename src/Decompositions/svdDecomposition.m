@@ -25,36 +25,37 @@ classdef svdDecomposition < pqDecomposition
 	%SVDDECOMPOSITION Implements the svd decomposition for the calculation
 	%of the state transition matrix.
 	methods
-		function obj = svdDecomposition(observable, system)
-			if nargin > 0
-				
-				obj.obs = observable; % saves the observable object
-				
-				[obs_pst, obs_fut] = obj.y_snapshots(system);
-				
-				if isfield(system,'u')
-					obj.m = size(system(1).u, 2);
-					[u_pst, u_fut] = obj.u_snapshots(system);
-					% Concatenates the input because all calculations are
-					% based on the matrices.
-					obs_pst = [obs_pst u_pst];
-					obs_fut = [obs_fut u_fut];
-				else
-					obj.m = 0;
-				end
-				U = obj.svd_solution(obs_fut, obs_pst);
-				obj.l = obj.obs.l;
-				obj.n = size(obj.obs.polynomials_order,2) + 1;
-				
-				% for the A, B and C properties, I have to call a method in
-				% the constructor to assign them. otherwise it always
-				% executes the whole get method.
-				obj.A = obj.matrix_A(U);
-				obj.B = obj.matrix_B(U);
-				obj.C = obj.matrix_C;
-				obj.D = zeros(obj.l,obj.m);
-			end
-		end
+    function obj = svdDecomposition(observable, system)
+      if nargin > 0
+
+        obj.obs = observable; % saves the observable object
+
+        [obs_pst, obs_fut] = obj.y_snapshots(system);
+
+        if isfield(system,'u')
+          obj.m = size(system(1).u, 2);
+          [u_pst, u_fut] = obj.u_snapshots(system);
+          % Concatenates the input because all calculations are
+          % based on the matrices.
+          obs_pst = [obs_pst u_pst];
+          obs_fut = [obs_fut u_fut];
+        else
+          obj.m = 0;
+        end
+        obj.num_obs = size(obj.obs.polynomials_order, 2);
+        U = obj.svd_solution(obs_fut, obs_pst);
+        obj.l = obj.obs.l;
+        obj.n = size(obj.obs.polynomials_order,2) + 1;
+
+        % for the A, B and C properties, I have to call a method in
+        % the constructor to assign them. otherwise it always
+        % executes the whole get method.
+        obj.A = obj.matrix_A(U);
+        obj.B = obj.matrix_B(U);
+        obj.C = obj.matrix_C;
+        obj.D = zeros(obj.l,1);
+      end
+    end
 		function u = svd_solution(obj, lhs, rhs)
 			[Ud,S,V] = svd(rhs,"econ");
 			s = diag(S);
