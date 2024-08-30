@@ -1,7 +1,7 @@
 % Script for testing the Duffing equation, forced and deterministic with
 % the decomposition based on the singular value decomosition with
 % effectie rank
-
+clear variables
 % call the script that simulates the experiments
 
 exp_forced_det_step
@@ -12,13 +12,13 @@ exp = duff_exp;
 % Test the orthogonal pqEDMD
 % ts = [2 4 5 6]; % index of training trajectories
 % tr = [1 3];
-tr = 1:6;
-ts = 7:9;
+tr = 1:4;
+ts = 5:9;
 
 tas_pq = pqEDMDm(p=[2 3 4 5], ... [2 3 4 5], ... 
-	q=[0.5 1 1.5], ...
+	q=[0.5 1 1.5 2 2.5], ...
 	observable = @legendreObservable, ...
-	dyn_dcp = @(sy,ob)sidDecomposition(3,1,sy,ob)); % ''  to use the ordinary least squares
+	dyn_dcp = @(sy,ob)sidOlsDecomposition(50,1,sy,ob)); % ''  to use the ordinary least squares
 dcps = tas_pq.fit(exp(tr));
 %%
 % Get the best performing decomposition from the error of the testing set

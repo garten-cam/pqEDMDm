@@ -41,7 +41,7 @@ classdef pqDecomposition
         obj.num_obs = size(obj.obs.polynomials_order, 2);
         % from the snapshots, get the regression
         
-        U = obj.U(obs_pst, obs_fut); % This is the transpose of U
+        U = obj.regression(obs_fut, obs_pst); % This is the transpose of U
         
         obj.l = obj.obs.l;
         obj.n = size(obj.obs.polynomials_order,2) + 1;
@@ -52,10 +52,10 @@ classdef pqDecomposition
         obj.A = obj.matrix_A(U);
         obj.B = obj.matrix_B(U);
         obj.C = obj.matrix_C;
-        obj.D = zeros(obj.l,1);
+        obj.D = zeros(obj.l,max(1,obj.m));
       end
     end
-    function u = U(obj, obs_pst, obs_fut)
+    function u = regression(obj, obs_fut, obs_pst)
       % Need this simple method here to inherit later
       g = obs_pst'*obs_pst;
       a = obs_pst'*obs_fut;

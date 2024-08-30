@@ -22,8 +22,8 @@ num_ics = 6; % Number of initial conditions for the test
 ics_width = 4; % ics range width
 % Create the initial conditions for the orbitst
 ics = ics_width*rand(num_ics,2) - ics_width/2;
-tfin = 20;
-n_points = 5*tfin + 1;
+tfin = 30;
+n_points = 20*tfin + 1;
 % Two asymptotically stable points response
 % parameters
 p.alpha = -1;

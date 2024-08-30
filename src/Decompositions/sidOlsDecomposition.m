@@ -1,78 +1,142 @@
-  classdef sidOlsDecomposition < sidDecomposition
-    %SIDOLSDECOMPOSITION Summary of this class goes here
-    %   Detailed explanation goes here
-  
-    methods
-      % function obj = sidOlsDecomposition(observable, system)
-      %   %SIDOLSDECOMPOSITION
-      %   if nargin > 0
-      %     obj.obs = observable; % saves the observable object
-      %     % concatenation.
-      %     [yeval_sys, u_sys] = obj.yu_eval(system);
-      %     % input dim
-      %     % input di
-      %     if isfield(system, 'u')
-      %       obj.m = size(system(1).u,2);
-      %     else
-      %       obj.m = 0;
-      %     end
-      %     % output dim i.e., dim(y)
-      %     obj.num_obs = size(obj.obs.polynomials_order, 2); % number of outputs, number of observables
-      %     % nunber of hankel blocks
-      %     obj.hl_bl = obj.hankel_blocks(yeval_sys);
-      %     % Hankelize
-      %     % Ysid = [Yp;Yf]
-      %     Ysid = cell2mat(cellfun(@(x) ...
-      %       {obj.block_hankel(x', 2*obj.hl_bl)},yeval_sys)');
-      %     % Usid=[Up;Uf]
-      %     if isfield(system, 'u')
-      %       Usid = cell2mat(cellfun(@(x) ...
-      %         {obj.block_hankel(x', 2*obj.hl_bl)},u_sys)');
-      %     else
-      %       Usid = zeros(2*obj.hl_bl,size(Ysid,2));
-      %     end
-      %     % Get Gamma
-      %     % [obj.Gamma, obj.n] = obj.computeGamma(Usid, Ysid);
-      %     [obj.A, obj.C, obj.K, obj.n] = obj.ACKn(Ysid, Usid);
-      %     obj.Gamma = obj.recomputeGamma(obj.A, obj.C);
-      %     [obj.B, obj.D] = obj.BD(yeval_sys, u_sys);
-      %     obj.l = obj.obs.l;
-      %     Cedmd = obj.matrix_C; % cannot calc and slice
-      %     obj.C_edmd = Cedmd(:,2:end);
-      %   end
-      % end
-      function [cost, res, a, c] = n_cost(obj, n, U, S, Ysid, Usid)
-        Un = U(:,1:n);
-        Sn = S(1:n, 1:n);
-        gam = Un*sqrtm(Sn); % Gamma
-        gmm = gam(1:end-obj.num_obs,:); % Gamma minus
-        gam_inv = pinv(gam); % and the inverses
-        gmm_inv = pinv(gmm);
+classdef sidOlsDecomposition < sidDecomposition
+  %SIDOLSDECOMPOSITION calculates the sid id with the first algorithm of
+  %Overschee
+  methods
+    function obj = sidOlsDecomposition(fb, pb, observable, system)
+      %SIDOLSDECOMPOSITION
+      if nargin > 0
+        obj.obs = observable; % saves the observable object
+        % concatenation.
+        [yeval_sys, u_sys] = obj.yu_eval(system);
+        % input dim
+        % input di
+        if isfield(system, 'u')
+          obj.m = size(system(1).u,2);
+          obj.unforced = false;
+        else
+          obj.m = 0;
+          obj.unforced = true;
+        end
 
-        [y_f, u_f, w_p, yfm, ufm, wpp] = obj.fut_pst_mat(Ysid, Usid);
+        % output dim i.e., dim(y)
+        obj.num_obs = size(obj.obs.polynomials_order, 2); % number of outputs, number of observables
+        % nunber of hankel blocks
+        obj.fb = fb;
+        obj.pb = pb;
+        if ~pb
+          obj.det = true;
+        else
+          obj.det = false;
+        end
+        obj.l = obj.obs.l;
 
-        Yii = Ysid((obj.hl_bl-1)*obj.num_obs+1:(obj.hl_bl)*obj.num_obs,:);
-        Uii = Usid((obj.hl_bl-1)*obj.m+1:obj.hl_bl*obj.m,:);
-  
-        Oi = obj.obliqueP(y_f, u_f, w_p);
-        Oip = obj.obliqueP(yfm, ufm, wpp);
+        % Hankelize
+        % Ysid = [Yp;Yf]
+        Ysid = cellfun(@(sys){obj.block_hankel(sys', obj.fb, obj.pb)},yeval_sys)'; %%% the same 2hb
+        % Usid=[Up;Uf]
+        if obj.unforced
+          % create all the empty matrices
+          Usid = cellfun(@(sys){zeros(0,width(sys))},Ysid);
+        else
+          Usid = cellfun(@(x) ...
+            {obj.block_hankel(x', obj.fb, obj.pb)},u_sys)';%%%% 2*obj.hl_bl
+        end
+        % Get Gamma
+        % [obj.Gamma, obj.n] = obj.computeGamma(Usid, Ysid);
+        [obj.A, obj.B, obj.C, obj.D, obj.K, obj.n] = obj.ABCDKn(Ysid, Usid);
+        % [obj.A, obj.C, obj.K, obj.n] = obj.ACKn(Ysid, Usid);
+        % obj.Gamma = obj.recomputeGamma(obj.A, obj.C);
+        % [obj.B, obj.D] = obj.BD(yeval_sys, u_sys);
+        % obj.l = obj.obs.l;
+        Cedmd = obj.matrix_C; % cannot calc and slice
+        obj.C_edmd = Cedmd(:,2:end);
+      end
+    end
+    function [a, b, c, d, k, n] = ABCDKn(obj, Ysid, Usid)
+      [U, S] = obj.compute_svd(Ysid, Usid);
+      ns = obj.num_obs:sum(diag(S)>1e-9);
 
-        WOiW = obj.zProjOx(Oi,u_f); % this removes the effect of the input
-        WOipW = obj.zProjOx(Oip,ufm); % this removes the effect of the input
-  
-        Xi = gam_inv * WOiW;
-        Xip = gmm_inv * WOipW;
- 
-        lhs = [Xip;Yii];
-        rhs = [Xi;Uii];
-        ac = obj.svd_solution(lhs', rhs')';%
-        a = ac(1:n,1:n);
-        c = ac(n+1:end,1:n);
-        % c = sol(obj.n+1:end,1:obj.n);
-        % d = sol(obj.n+1:end,obj.n+1:end);
-        % c = obj.svd_solution(Yii', Xi')';
-        res = lhs - ac*rhs;
-        cost = sum(abs(res),'all');
-      end % funcion
-    end % methods
-  end % class
+      % Optimice for n
+      nv = arrayfun(@(n)obj.n_cost(n, U, S, Ysid, Usid), ns);
+      [~, midx] = min(nv);
+      % It is cheaper to test all and select the best than to optimize.
+      n = ns(midx);
+      % calculate everything that the "optimization" calculates inside. For
+      % the best of the orders n.
+      [~, res, a, b, c, d] = obj.n_cost(n, U, S, Ysid, Usid);
+      SigWE = res*res'/(size(res,2)-1);
+      QQ = SigWE(1:obj.n,1:obj.n);
+      RR = SigWE(obj.n+1:obj.n+obj.num_obs,obj.n+1:obj.n+obj.num_obs);
+      SS = SigWE(1:obj.n,obj.n+1:obj.n+obj.num_obs);
+      [~,k,~,~] = idare(a',c',QQ,RR,SS); % Kalman filter ARE
+      k = k'; % Kalman gain
+      if obj.m == 0
+        b = zeros(n,1);
+        d = zeros(obj.num_obs,1);
+      end
+    end
+
+    function [cost, res, a, b, c, d] = n_cost(obj, n, U, S, Ysid, Usid)
+      Un = U(:,1:n);
+      Sn = S(1:n, 1:n);
+      % We only need the inverse of Gamma
+      gam_inv = pinv(Un*sqrtm(Sn)); % and the inverses
+      % future and past matrices
+      [y_f, u_f, w_p] = obj.fut_pst_mat(Ysid, Usid);
+
+      z_i = obj.get_zi(y_f, u_f, w_p);
+      % Calculate the state sequences
+      x = cellfun(@(zi){gam_inv*zi},z_i);
+
+      % Solve a regression like the original EDMD
+      % Get the divided matrices
+      [xp, xf, yiif, ufp, uff] = obj.edmd_like_division(x, y_f, u_f);
+      % [xf;uf] = [A,B][xp;up];
+      ab_lhs = [cell2mat(xf);cell2mat(uff)];
+      ab_rhs = [cell2mat(xp);cell2mat(ufp)];
+      ab = obj.regression(ab_lhs', ab_rhs')';
+      a = ab(1:n,1:n);
+      if obj.m == 0
+        b = zeros(n,0);
+      else
+        b = ab(1:n,n+1:end);
+      end
+      % resab = ab_lhs - ab*ab_rhs;
+      % Solve for C
+      % yiif = Cxf
+      c_lhs = cell2mat(yiif);
+      c_rhs = cell2mat(xf);
+      c = obj.regression(c_lhs', c_rhs')';
+      d = zeros(height(c),width(b));
+      % resc = c_lhs - cc*c_rhs;
+      res = [cell2mat(xf);cell2mat(yiif)] ...
+        - [a b;c d]*ab_rhs;
+      cost = sum(abs(res),'all');
+    end % funcion
+    function z_i = get_zi(obj, y_f, u_f, w_p)
+      if obj.unforced
+        if obj.det
+          z_i = y_f;
+        else
+          z_i = cellfun(@(yi,wi){obj.zProj_x(yi, wi)},y_f, w_p); % Uf
+        end
+      else
+        z_i = cellfun(@(yi,ui,wi){obj.obliqueP(yi,ui,wi)},y_f, u_f, w_p);
+      end
+    end
+    function [x_p, x_f, yii_f, u_fp, u_ff] = edmd_like_division(obj, x, y_f, u_f)
+      % edmd_like_division
+      % Slice and reconcatenate
+      % x past
+      x_p = cellfun(@(xi){xi(:,1:end-1)},x);
+      % x future
+      x_f = cellfun(@(xi){xi(:,2:end)},x);
+      % yii future
+      yii_f = cellfun(@(yi,xi){yi(1:obj.num_obs,2:width(xi))},y_f,x);
+      % u in the future, that is the past of yii_f
+      u_fp = cellfun(@(ui,xi){ui(1:obj.m,1:width(xi)-1)},u_f,x);
+      % u in the future that is the future of u_fp
+      u_ff = cellfun(@(ui,xi){ui(1:obj.m,2:width(xi))},u_f,x);
+    end% Function
+  end % methods
+end % class

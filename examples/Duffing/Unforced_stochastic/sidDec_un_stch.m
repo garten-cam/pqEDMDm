@@ -1,6 +1,6 @@
 % Script for testing the Duffing equation, unforced, and deterministic with
 % the basic pqDecomposition
-
+clear variables
 % call the script that generates the experiments
 
 exp_un_stch_meas;
@@ -17,10 +17,10 @@ exp = duff_exp;
 ts = [2 4 5 6]; % index of training trajectories
 tr = [1 3];
 
-tas_pq = pqEDMDm(p=[2 3 4 5], ... 
-	q=[0.5 1 1.5 2], ...
+tas_pq = pqEDMDm(p=[3 4 5], ... p=[2 3 4 5]
+	q=[2 2.5], ...
 	observable = @legendreObservable, ...
-	dyn_dcp = @(ob,sy)sidDecomposition(1,1,ob,sy)); % '' to use the ordinary least squares
+	dyn_dcp = @(ob,sy)sidOlsDecomposition(1,1,ob,sy)); % '' to use the ordinary least squares
 dcps = tas_pq.fit(exp(tr));
 %%
 % Get the best performing decomposition

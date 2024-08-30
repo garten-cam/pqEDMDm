@@ -1,14 +1,18 @@
 % Script for the application of the pqEDMD to the TcLab
 % get the data from the file
+clear variables
 dataTcL
 dyndata = table2array(dyndata);
+tot_sam = height(dyndata);
 % Retrieve the samples
-s_ii = linspace(1,501,6);
-s_if = linspace(100,600,6);
+segments = 8;
+s_ii = floor(1:tot_sam/segments:tot_sam);
+% %s_ii = floor(linspace(1,600,7));
+s_if = [s_ii(2:end)-1 tot_sam];
 % % some random numbers to make the trajectories of different lenghts
-shift = [-8 -4 1 10 10];%%
-s_ii(2:6) = s_ii(2:6) + shift;
-s_if(1:5) = s_if(1:5) + shift;
+% shift = [-8 -4 1 10 10];%%
+% s_ii(2:6) = s_ii(2:6) + shift;
+% s_if(1:5) = s_if(1:5) + shift;
 %
 % New approach, single trajectory for training last part for testing
 % s_ii = [1, 501];
@@ -23,18 +27,21 @@ sm_n = normalize_data(samples,[-1,1]);
 % sm_n = samples;   
 
 % Trainin and testing
-ts = [4];
+tr = 1:segments;
+allcomb = nchoosek(tr,2);
+ts = allcomb(randi(length(allcomb),1),:);
+tr(ts) = [];
 % ts = 3;
-tr = [1, 2, 3, 5, 6];
+% tr = [1, 4, 5, 6, 7, 8];
 % tr = 1;
-
-sidEDMD = pqEDMDm(p=[2 3 4],q=[0.5 1 1.5], ...
-	observable = @hermiteObservable, ...
-	dyn_dcp = @svdDecomposition);%@(o,s)sidDecomposition(8,2,o,s));
 %%
+sidEDMD = pqEDMDm(p=[1 2 3 4],q=[0.5 1 1.5 2], ...
+	observable = @legendreObservable, ...
+	dyn_dcp = @(o,s)sidOlsDecomposition(5,1,o,s));
+%
 sid_dcps = sidEDMD.fit(sm_n(tr));
 %
-err = arrayfun(@(dcp)dcp.error(sm_n(ts)),sid_dcps);
+err = arrayfun(@(dcp)dcp.abs_error(sm_n(ts)),sid_dcps);
 % calculate the best trajectories
 [~, best_dcp] = min(err);
 
