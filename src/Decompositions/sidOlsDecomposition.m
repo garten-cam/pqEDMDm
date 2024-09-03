@@ -5,30 +5,26 @@ classdef sidOlsDecomposition < sidDecomposition
     function obj = sidOlsDecomposition(fb, pb, observable, system)
       %SIDOLSDECOMPOSITION
       if nargin > 0
-        obj.obs = observable; % saves the observable object
-        % concatenation.
+        obj.obs = observable; 
         [yeval_sys, u_sys] = obj.yu_eval(system);
-        % input dim
-        % input di
         if isfield(system, 'u')
           obj.m = size(system(1).u,2);
           obj.unforced = false;
+          obj.pb = max(1,pb); % Hankel blocks for the past
+          % if forced, pb at least 1
         else
           obj.m = 0;
           obj.unforced = true;
         end
-
-        % output dim i.e., dim(y)
         obj.num_obs = size(obj.obs.polynomials_order, 2); % number of outputs, number of observables
-        % nunber of hankel blocks
-        obj.fb = fb;
-        obj.pb = pb;
+        obj.fb = fb; % Hankel blocks for the future
         if ~pb
           obj.det = true;
         else
           obj.det = false;
+          obj.pb = pb; % for the past
         end
-        obj.l = obj.obs.l;
+        obj.l = obj.obs.l; % Number of state variables
 
         % Hankelize
         % Ysid = [Yp;Yf]
@@ -41,13 +37,9 @@ classdef sidOlsDecomposition < sidDecomposition
           Usid = cellfun(@(x) ...
             {obj.block_hankel(x', obj.fb, obj.pb)},u_sys)';%%%% 2*obj.hl_bl
         end
-        % Get Gamma
-        % [obj.Gamma, obj.n] = obj.computeGamma(Usid, Ysid);
+        % Get the system
         [obj.A, obj.B, obj.C, obj.D, obj.K, obj.n] = obj.ABCDKn(Ysid, Usid);
-        % [obj.A, obj.C, obj.K, obj.n] = obj.ACKn(Ysid, Usid);
-        % obj.Gamma = obj.recomputeGamma(obj.A, obj.C);
-        % [obj.B, obj.D] = obj.BD(yeval_sys, u_sys);
-        % obj.l = obj.obs.l;
+        % back to the state
         Cedmd = obj.matrix_C; % cannot calc and slice
         obj.C_edmd = Cedmd(:,2:end);
       end
@@ -90,7 +82,7 @@ classdef sidOlsDecomposition < sidDecomposition
 
       % Solve a regression like the original EDMD
       % Get the divided matrices
-      [xp, xf, yiif, ufp, uff] = obj.edmd_like_division(x, y_f, u_f);
+      [xp, xf, yiip, ufp, uff] = obj.edmd_like_division(x, y_f, u_f);
       % [xf;uf] = [A,B][xp;up];
       ab_lhs = [cell2mat(xf);cell2mat(uff)];
       ab_rhs = [cell2mat(xp);cell2mat(ufp)];
@@ -104,12 +96,12 @@ classdef sidOlsDecomposition < sidDecomposition
       % resab = ab_lhs - ab*ab_rhs;
       % Solve for C
       % yiif = Cxf
-      c_lhs = cell2mat(yiif);
+      c_lhs = cell2mat(yiip);
       c_rhs = cell2mat(xf);
       c = obj.regression(c_lhs', c_rhs')';
       d = zeros(height(c),width(b));
       % resc = c_lhs - cc*c_rhs;
-      res = [cell2mat(xf);cell2mat(yiif)] ...
+      res = [cell2mat(xf);cell2mat(yiip)] ...
         - [a b;c d]*ab_rhs;
       cost = sum(abs(res),'all');
     end % funcion
@@ -124,7 +116,7 @@ classdef sidOlsDecomposition < sidDecomposition
         z_i = cellfun(@(yi,ui,wi){obj.obliqueP(yi,ui,wi)},y_f, u_f, w_p);
       end
     end
-    function [x_p, x_f, yii_f, u_fp, u_ff] = edmd_like_division(obj, x, y_f, u_f)
+    function [x_p, x_f, yii_p, u_fp, u_ff] = edmd_like_division(obj, x, y_f, u_f)
       % edmd_like_division
       % Slice and reconcatenate
       % x past
@@ -132,7 +124,7 @@ classdef sidOlsDecomposition < sidDecomposition
       % x future
       x_f = cellfun(@(xi){xi(:,2:end)},x);
       % yii future
-      yii_f = cellfun(@(yi,xi){yi(1:obj.num_obs,2:width(xi))},y_f,x);
+      yii_p = cellfun(@(yi,xi){yi(1:obj.num_obs,1:width(xi)-1)},y_f,x);
       % u in the future, that is the past of yii_f
       u_fp = cellfun(@(ui,xi){ui(1:obj.m,1:width(xi)-1)},u_f,x);
       % u in the future that is the future of u_fp
