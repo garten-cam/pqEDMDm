@@ -20,7 +20,7 @@ tr = [1 3];
 tas_pq = pqEDMDm(p=[3 4 5], ... p=[2 3 4 5]
 	q=[2 2.5], ...
 	observable = @legendreObservable, ...
-	dyn_dcp = @(ob,sy)sidOlsDecomposition(1,1,ob,sy)); % '' to use the ordinary least squares
+	dyn_dcp = @(ob,sy)sidDecomposition(1,1,ob,sy)); % '' to use the ordinary least squares
 dcps = tas_pq.fit(exp(tr));
 %%
 % Get the best performing decomposition
@@ -37,7 +37,7 @@ appx = dcp.pred_from_test(exp(ts));
 tas_f = figure(1);
 clf
 hold on
-% pot the deterministic samples
+% plot the deterministic samples
 det = arrayfun(@(ex)plot(ex.y_det(:,1),ex.y_det(:,2),'g',LineWidth=3),exp);
 % plot the training set
 trp = arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'b',LineWidth=2),exp(tr));

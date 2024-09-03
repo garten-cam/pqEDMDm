@@ -34,7 +34,7 @@ end
 
 two_nrm = normalize_data(two_as,[-1,1]);
 % two_nrm = two_as;
-  
+
 
 
 %%
@@ -58,7 +58,7 @@ end
 dcp = dcps(best);
 
 % Compare the prediction of the best performing prediction with
-% the test set 
+% the test set
 
 
 appx = dcp.pred_from_test(two_nrm(ts));

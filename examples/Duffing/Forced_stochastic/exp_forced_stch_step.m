@@ -22,8 +22,8 @@ num_ics = 9; % Number of initial conditions for the test
 ics_width = 4; % ics range width
 % Create the initial conditions for the orbitst
 ics = ics_width*rand(num_ics,2) - ics_width/2;
-tfin = 20;
-n_points = 5*tfin + 1;
+tfin = 30;
+n_points = 20*tfin + 1;
 % Two asymptotically stable points response
 % parameters
 p.alpha = -1;
@@ -36,11 +36,13 @@ duff_exp = arrayfun(@(exp)struct('t',zeros(n_points,1),...
   'y',zeros(n_points,2),'u',exp.gamma*ones(n_points,1)),u);
 odeSettings = odeset('RelTol',1e-3,'AbsTol',1e-6);
 for orb = 1 : num_ics
-	[duff_exp(orb).t, duff_exp(orb).y] = ode23(@(t,x)DuffEqODEu(t,x,p, ...
+	[duff_exp(orb).t, y] = ode23(@(t,x)DuffEqODEu(t,x,p, ...
 		u(orb)),...
 		linspace(0,tfin,n_points), ...
 		ics(orb,:), ...  
 		odeSettings);
+  duff_exp(orb).y_det = y;
+  duff_exp(orb).y = y + normrnd(0, 0.01, size(y));
 end
 
 % From here, call different decompositions to test the performance

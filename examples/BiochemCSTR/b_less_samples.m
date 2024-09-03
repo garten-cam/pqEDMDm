@@ -9,7 +9,6 @@ ics = [(0.1-0.05)*rand(num_ics, 1)+0.05, (0.2-0.01)*rand(num_ics, 1)+0.01];
 %
 tfin = 40;
 n_points = 1*tfin+1;
-%
 in = (0.16-0.1)*rand(num_ics, 1)+0.1;
 % preallocate the array of structures
 exp = arrayfun(@(z)struct('y', zeros(n_points, 2), ...

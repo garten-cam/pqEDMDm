@@ -37,7 +37,7 @@ tr(ts) = [];
 %%
 sidEDMD = pqEDMDm(p=[1 2 3 4],q=[0.5 1 1.5 2], ...
 	observable = @legendreObservable, ...
-	dyn_dcp = @(o,s)sidOlsDecomposition(5,1,o,s));
+	dyn_dcp = @(o,s)sidOlsDecomposition(5,2,o,s));
 %
 sid_dcps = sidEDMD.fit(sm_n(tr));
 %
