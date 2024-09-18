@@ -4,14 +4,12 @@ classdef sidDecomposition < svdDecomposition
 		K % Kalman gain of the solution
 		fb % number of Hankel blocks for the Future calculations
 		pb % Past blocks.
-		Gamma % observability matrix ??Return this??
-		C_edmd % C matrix to return to space state
+		Cedmd % C matrix to return to space state
 	end
 	properties (Hidden)
 		det
 		unforced
 		n_cols % Number of columns in each sample
-		ac % For testing the bd matrices
 	end
 	methods
 		function obj = sidDecomposition(fb, pb, observable, system)
@@ -22,25 +20,25 @@ classdef sidDecomposition < svdDecomposition
 				if isfield(system, 'u')
 					obj.m = size(system(1).u,2);
 					obj.unforced = false;
-          if ~pb
-            obj.det = true;
-            obj.pb = 1;
-          else 
-            obj.det = false;
-            obj.pb = pb;
-          end
+					if ~pb
+						obj.det = true;
+						obj.pb = 1;
+					else
+						obj.det = false;
+						obj.pb = pb;
+					end
 					obj.pb = max(1,pb); % Hankel blocks for the past
 					% if forced, pb at least 1
-        else
-          obj.m = 0;
+				else
+					obj.m = 0;
 					obj.unforced = true;
-          if ~pb
-            obj.pb = 1;
-            obj.det = true;
-          else
-            obj.pb = pb;
-            obj.det = false;
-          end
+					if ~pb
+						obj.pb = 1;
+						obj.det = true;
+					else
+						obj.pb = pb;
+						obj.det = false;
+					end
 				end
 				obj.num_obs = size(obj.obs.polynomials_order, 2); % number of outputs, number of observables
 				obj.fb = fb; % Hankel blocks for the future
@@ -54,13 +52,13 @@ classdef sidDecomposition < svdDecomposition
 					Usid = cellfun(@(sys){zeros(0,width(sys))},Ysid);
 				else
 					Usid = cellfun(@(x) ...
-						{obj.block_hankel(x', obj.fb, obj.pb)},u_sys)';%%%% 2*obj.hl_bl
+						{obj.block_hankel(x', obj.fb, obj.pb)},u_sys)';
 				end
 				% Get the system
 				[obj.A, obj.B, obj.C, obj.D, obj.K, obj.n] = obj.ABCDKn(Ysid, Usid);
 				% back to the state
-				Cedmd = obj.matrix_C; % cannot calc and slice
-				obj.C_edmd = Cedmd(:,2:end);
+				Cedmd = obj.matrix_C; % cannot calculate and slice in the same line
+				obj.Cedmd = Cedmd(:,2:end);
 			end
 		end
 		function [a, b, c, d, k, n] = ABCDKn(obj, Ysid, Usid)
@@ -99,7 +97,7 @@ classdef sidDecomposition < svdDecomposition
 				% WOW a la MOESP
 				WOW = cell2mat(cellfun(@(oii,ui){obj.zProjOx(oii,ui)},Oi,u_f));
 			end
-			[u,s,~] = svd(WOW);
+			[u,s,~] = svd(WOW,"econ");
 		end
 		function [cost, res, a, b, c, d] = n_cost(obj, n, U, S, Ysid, Usid)
 			gam_inv = pinv(U(:,1:n) * sqrtm(S(1:n, 1:n)));
@@ -169,7 +167,7 @@ classdef sidDecomposition < svdDecomposition
 					% Save the state
 					pred(orb).sv(step,:) = x_post';
 					% Save the output
-					pred(orb).y(step,:) = obj.C_edmd*(obj.C*x_post + obj.D*u{orb}(step,:)');
+					pred(orb).y(step,:) = obj.Cedmd*(obj.C*x_post + obj.D*u{orb}(step,:)');
 				end
 			end
 		end

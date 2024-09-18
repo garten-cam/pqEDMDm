@@ -10,7 +10,7 @@ exp_un_stch_meas;
 % exp = normalize_data(duff_exp,[-1,1]);
 
 % "useless" copy, basicatly just renaming in case we want to test the
-% normalized case. 
+% normalized case.
 exp = duff_exp;
 
 % Test the orthogonal pqEDMD
@@ -47,10 +47,10 @@ tsp = arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'r',LineWidth=2),exp(ts));
 sia = arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'-.k',LineWidth=1.5),appx);
 legend([det(1), trp(1), tsp(1), sia(1)],{"determ","training", "testing", "approx"})
 title({"pqDecomposition" + ...
-  " p="+num2str(dcp.obs.p) + ...
-  " q="+num2str(dcp.obs.q), ...
-  " d=" + num2str(dcp.num_obs) + ...
-  " $\epsilon$="+num2str(er_bst)},Interpreter="latex")
+	" p="+num2str(dcp.obs.p) + ...
+	" q="+num2str(dcp.obs.q), ...
+	" d=" + num2str(dcp.num_obs) + ...
+	" $\epsilon$="+num2str(er_bst)},Interpreter="latex")
 % axis([-1 1 -1 1])
 %saveas(tas_f,strcat(figpath, "tr_ts.png"))
 %saveas(tas_f,strcat(figpath, "approx.png"))

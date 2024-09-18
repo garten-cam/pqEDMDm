@@ -45,8 +45,8 @@ for orb = 1 : num_ics
 		linspace(0,tfin,n_points), ...
 		ics(orb,:), ...
 		odeSettings);
-  duff_exp(orb).y_det = y;
-  duff_exp(orb).y = y + normrnd(0, 0.01, size(y));
+	duff_exp(orb).y_det = y;
+	duff_exp(orb).y = y + normrnd(0, 0.01, size(y));
 end
 
 % From here, we can call the  different decompositions

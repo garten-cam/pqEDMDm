@@ -34,13 +34,13 @@ classdef pqObservable
         function p_o = polynomials_order(obj)
             pm = obj.p_matrix;
             if ~isinf(pm)
-                p_o = pm( : , vecnorm(pm, obj.q) <= obj.p);
+                p_o = pm( : , vecnorm(pm, obj.q, 1) <= obj.p);
             else
                 p_o = obj.elementwise_orders( ...
                     obj.l, obj.p, obj.q);
             end
             % Sort the thing lexicografically
-            [~, sorting] = sort(vecnorm(p_o, obj.p));
+            [~, sorting] = sort(vecnorm(p_o, obj.p, 1));
             p_o = p_o(:, sorting);
         end
         function poly_b = poly_base(obj)

@@ -27,19 +27,11 @@ classdef pqEDMDm
   % desireded decomposition.
 
   properties % Inputs
-    p (1,:) {mustBePositive, mustBeInteger, mustBeLessThanOrEqual(p,10)} = 3 % Array of maximum order p of the polynomials
+    p (1,:) {mustBePositive, mustBeInteger, mustBeLessThanOrEqual(p,10)} = 2 % Array of maximum order p of the polynomials
     q (1,:) {mustBePositive} = 1.2 % Array of q quasi-norm values for the individual polynomials.
     observable = @legendreObservable % Observable object.
     dyn_dcp = @pqDecomposition % Dynamic decomposition object.
-  end
-  %
-  % properties % Calculated properties that help in the calculation
-  %   best_pqEDMD % Best solution
-  % end
-  %
-  % properties
-  %   best_pqDecomposition
-  % end
+	end
   methods
     function obj = pqEDMDm(system, varargin)
       if nargin > 0
