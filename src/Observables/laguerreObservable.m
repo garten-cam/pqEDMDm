@@ -1,6 +1,6 @@
 classdef laguerreObservable < pqObservable
     % laguerreObservable Creates an instace of a Hermite polynomials based
-    % function with a p-q-quasi norm reduction for 'n' variables and an 'a' 
+    % function with a p-q-quasi norm reduction for 'l' variables and an 'a' 
     % paramter value.
     % 
     % The order of the polynomials is not greater than 'p', and the quasi
@@ -9,13 +9,7 @@ classdef laguerreObservable < pqObservable
     % O = laguerreObservable() Laguerre based function for the default class
     % values
     % 
-    % O = laguerreObservable(p, q, n, huge_p_matrix)
-    % 
-    % O = laguerreObservable( _ , huge_p_matrix) Provides the matrix of maximum
-    % orders to avoid recalculation for several instances of the class with
-    % the same p-value. Provide an empty array for the in-class calculation
-    % e.g.,
-    % O = laguerreObservable(p, q, n_vars, [])
+    % O = laguerreObservable(p, q, l, a)
 properties
         a (1,1) {mustBeReal} = 1 % parameter a for the laguerreP polynomial
     end

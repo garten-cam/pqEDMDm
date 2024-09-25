@@ -5,10 +5,10 @@ classdef legendreObservable < pqObservable
     % The order of the polynomials is not greater than 'p'p, and the quasi
     % norm of the indices per polynomial function is less than 'q'.
     % 
-    %   O = laguerreObservable() Laguerre based function for the default class
+    %   O = legendreObservable() Laguerre based function for the default class
     % values
     % 
-    %   O = laguerreObservable(p, q, l)
+    %   O = legendreObservable(p, q, l)
     % 
    
     methods

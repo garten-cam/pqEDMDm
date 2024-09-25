@@ -5,29 +5,17 @@ Original version and citation:
 
 [Garcia-Tenorio, C.; Vande Wouwer, A. A Matlab Toolbox for Extended Dynamic Mode Decomposition Based on Orthogonal Polynomials and p-q Quasi-Norm Order Reduction. Mathematics 2022, 10, 3859. https://doi.org/10.3390/math10203859](https://www.mdpi.com/2227-7390/10/20/3859)
 
-The pqEDMD is an evolution of the extended dynamic mode decomposition (EDMD) algorithm. The premise is to use a p-q-quasi norm reduction method to select the orders of the polynomials. From the orders, the products of univariate polynomials create the set of _observables_ that _extend_ the measurements of the system, and provide the possibility of having an operator on this set of functions. And finally, the action of the operator on the set of functions is related to the evolution of the states in a nonlinear system.
-
-Consider an arbitrary nonlinear system $(\mathcal{M};\mathcal{U};T(x);k)$,
-
-$$
-\begin{align}
- x(k+1) &= T(x(k)) + Bu\\
-   y(k) &= C x(k) + Du(k)
-\end{align}
-$$
-
-- $x\in\mathcal{M}\subseteq\mathbb{R}^{n}$ is the state.
-- $u\in\mathcal{U}\subseteq\mathbb{R}^{m}$ is the input.
-- $y\in\mathcal{Y}\subseteq\mathbb{R}^{l}$ is the output space.
-- $k\in\mathbb{Z}_{0}^{+}$ is the discrete time.
-- $T\colon{}\mathcal{M}\rightarrow{}\mathcal{M}$ is the nonlinear transition operator.
-- $B\in\mathbb{R}^{n\times m}$ is the input-to-state matrix.
-- $C\in\mathbb{R}^{l\times n}$ is the state-to-output matrix.
-- $D\in\mathbb{R}^{l\times m}$ is the input-to-output matrix.
-
 ## Installation
 
-Add all the files to your Matlab path
+1. Clone this repository
+```bash
+git clone https://github.com/garten-cam/pqEDMDm.git
+``` 
+
+2. Add the directory to your path
+```matlab
+>> addpath('~/pqEDMDm')
+```
 
 ## Minimal Working Example
 

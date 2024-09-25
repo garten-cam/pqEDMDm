@@ -1,5 +1,4 @@
-figpath = "./pqEDMDm/examples/figures/";
-% for numerical consistency
+clear variables% for numerical consistency
 rng(1)
 % define the parameters for the simulation
 num_ics = 10; % Number of initial conditions for the test
@@ -32,8 +31,8 @@ for orb = 1 : num_ics
 		odeSettings);
 end
 
-two_nrm = normalize_data(two_as,[-1,1]);
-% two_nrm = two_as;
+% two_nrm = normalize_data(two_as,[-1,1]);
+two_nrm = two_as;
 
 
 
@@ -45,7 +44,7 @@ tr = [3 4 5 6 7 8 9 10];
 tas_pq = pqEDMDm(p=[2 3 4 5], ...
 	q=[0.5 1 1.5 2], ...
 	observable = @legendreObservable, ...
-	dyn_dcp = @svdDecomposition); % '' to use the ordinary least squares
+	dyn_dcp = @maxLikeDecomposition); % '' to use the ordinary least squares
 dcps = tas_pq.fit(two_nrm(tr));
 %%
 % Get the best performing decomposition

@@ -1,8 +1,8 @@
 % Script for the simulation of the simple bioreactor
 % simulate the phase plane and the approximation by the pqEDMD
-rng(12345)
+rng(1234)
 % define the parameters for the simulation
-num_ics = 60; % Number of initial conditions for the test
+num_ics = 20; % Number of initial conditions for the test
 % Create the initial conditions for the samples
 % Even though the initial conditions should always start at the lower left
 % corner, this will plot the phase plane with constant dilution rate.
@@ -12,7 +12,7 @@ ics = [
 	(1.58-0.01)*rand(num_ics, 1)+0.01, (4-0.01)*rand(num_ics, 1)+0.01
 	];
 %
-tfin = 40;
+tfin = 30;
 n_points = 1*tfin+1;
 %
 % The first figure is the phase plane with dilution rate D=O.2
@@ -42,19 +42,22 @@ arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'b'),exp)
 xlabel('$x_1$', 'Interpreter', 'latex')
 ylabel('$x_2$', 'Interpreter', 'latex')
 title("Phase plane")
+% saveas(trfig,'~/Documents/BioReactorConf/figures/phase_phase.fig','eps')
 
 % Create the decomposition object
 pen_edmd = pqEDMDm( ...
 	p = [4 5 6],...
 	q = [0.5 1 2 2.5],...
-	observable = @legendreObservable,...
+	observable = @(p,q,l)laguerreObservable(p,q,l,0.1),...
 	dyn_dcp = @svdDecomposition...
 	);
 % Normalize the data
-exp_n = normalize_data(exp,[-1,1]);
+% exp_n = normalize_data(exp,[-1,1]);
+exp_n = exp;
 % set the training and testing sets
 tr = 1:2:num_ics;
-ts = 2:2:num_ics;
+ts = 1:1:num_ics;
+ts(tr) = [];
 % tr(ts) = [];
 % Calculate all the decompositions
 pen_dcps = pen_edmd.fit(exp_n(tr));
@@ -82,29 +85,29 @@ xlabel('$x_1$',Interpreter='latex')
 ylabel('$x_2$', Interpreter='latex')
 legend([trp(1), tsp(1), tsa(1)],{'training','testing','pqEDMD'},"Location","best")
 title("pqEDMD appx")
-
+%%
 % Put the two figures in a tiled layout for the paper
 a_pp = figure(3);
 clf
-tiledlayout("horizontal","TileSpacing","tight")
-nexttile
-hold on
-arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'b'),exp)
-xlabel('$x_1$: biomass', 'Interpreter', 'latex')
-ylabel('$x_2$: substrate', 'Interpreter', 'latex')
-title("(a) Phase plane")
-nexttile
+% tiledlayout("horizontal","TileSpacing","tight")
+% nexttile
+% hold on
+% arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'b', LineWidth=2),exp)
+% xlabel('$x_1$: biomass', 'Interpreter', 'latex')
+% ylabel('$x_2$: substrate', 'Interpreter', 'latex')
+% title("(a) Phase plane")
+% nexttile
 hold on
 % Plot the training set
-trp = arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'b','LineWidth',2),exp_n(tr));
+trp = arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'b',LineWidth=2),exp_n(tr));
 % Plot the testing set
-tsp = arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'r','LineWidth',2),exp_n(ts));
+tsp = arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'r', LineWidth=2),exp_n(ts));
 % Plot the testing approximation
 tsa = arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'-.k','LineWidth',2),pen_pred);
 xlabel('$x_1$: biomass',Interpreter='latex')
 ylabel('$x_2$ substrate', Interpreter='latex')
-legend([trp(1), tsp(1), tsa(1)],{'training','testing','pqEDMD'})
+legend([trp(1), tsp(1), tsa(1)],{'training','testing','pqEDMD'}, Location="best")
 title("(b) pqEDMD appx")
-set(gcf,'PaperPosition', [0, 0, 8, 4])
-% saveas(a_pp,"~/Documents/sidDecompositionJ/figures/a_phase_plane.fig")
-% saveas(a_pp,"~/Documents/sidDecompositionJ/figures/a_phase_plane.eps", "epsc")
+set(gcf,'PaperPosition', [0, 0, 10, 10])
+saveas(a_pp,"~/Documents/BioReactorConf/figures/a_phase_plane.fig")
+saveas(a_pp,"~/Documents/BioReactorConf/figures/a_phase_plane.eps", "epsc")

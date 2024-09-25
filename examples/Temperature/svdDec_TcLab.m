@@ -5,11 +5,11 @@ dataTcL
 dyndata = table2array(dyndata);
 tot_sam = height(dyndata);
 % Retrieve the samples
-segments = 5;
+segments = 7;
 s_ii = floor(1:tot_sam/segments:tot_sam);
 % %s_ii = floor(linspace(1,600,7));
 s_if = [s_ii(2:end)-1 tot_sam];
-% % some random numbers to make the trajectories of different lenghts
+% % some random numbers to make the trajecto$ries of different lenghts
 % shift = [-8 -4 1 10 10];%%
 % s_ii(2:6) = s_ii(2:6) + shift;
 % s_if(1:5) = s_if(1:5) + shift;
@@ -18,13 +18,13 @@ s_if = [s_ii(2:end)-1 tot_sam];
 % s_ii = [1, 501];
 % s_if = [500, 600];
 samples = arrayfun(@(i,f)[struct('t',dyndata(i:f,1), ...
-	'y',dyndata(i:f,4), ...
-	'u',dyndata(i:f,[2 5]))],s_ii,s_if)';
+	'y',dyndata(i:f, [4 5]), ...
+	'u',dyndata(i:f, [2 3]))],s_ii,s_if)';
 
 
 % Normalize the data
-% sm_n = normalize_data(samples,[-1,1]);
-sm_n = samples;   
+sm_n = normalize_data(samples,[0,1]);
+% sm_n = samples; 
 
 % Trainin and testing
 tr = 1:segments;
@@ -35,14 +35,14 @@ tr(ts) = [];
 % tr = [1, 4, 5, 6, 7, 8];
 % tr = 1;
 %%
-sidEDMD = pqEDMDm(p=[4 5 6 7 8],q=[0.5 1 1.5 2], ...
-	observable = @hermiteObservable, ...
-	dyn_dcp = @(o,s)sidDecomposition(4,3,o,s));
-		% dyn_dcp = @svdDecomposition);
+sidEDMD = pqEDMDm(p=[2 3 4],q=[0.5 1], ...
+	observable = @(p,q,l)gegenbauerObservable(p,q,l,2), ...
+dyn_dcp = @svdDecomposition);
+			% dyn_dcp = @(o,s)sidDecomposition(10,6,o,s));
 %
 dcps = sidEDMD.fit(sm_n(tr));
 %
-err = arrayfun(@(dcp)dcp.abs_error(sm_n(ts)),dcps)
+err = arrayfun(@(dcp)dcp.error(sm_n(ts)),dcps)
 % calculate the best trajectories
 [minerr, best] = min(err);
 
@@ -56,9 +56,9 @@ clf
 hold on
 trp_vv = arrayfun(@(sam){plot(sam.t,sam.y,'b','LineWidth',2)},sm_n(tr));
 tsp_vv = arrayfun(@(sam){plot(sam.t,sam.y,'r','LineWidth',2)},sm_n(ts));
-app_v1 = arrayfun(@(tst,prd){plot(tst.t,prd.y(:,1),'-.k','LineWidth',2)},sm_n(ts),sid_tst);
+app_v1 = arrayfun(@(tst,prd){plot(tst.t,prd.y,'-.k','LineWidth',2)},sm_n(ts),sid_tst);
 %
 % app_v2 = arrayfun(@(tst,prd){plot(tst.t,prd.y(:,2),'-.k','LineWidth',2)},sm_n(ts),sid_tst);
-in_ht1 = arrayfun(@(sam){plot(sam.t,sam.u(:,1),'g','LineWidth',2)},sm_n);
-in_ht2 = arrayfun(@(sam){plot(sam.t,sam.u(:,2),'m','LineWidth',1.5)},sm_n);
+in_ht1 = arrayfun(@(sam){plot(sam.t,sam.u,'m','LineWidth',2)},sm_n);
+% in_ht2 = arrayfun(@(sam){plot(sam.t,sam.u(:,2),'m','LineWidth',1.5)},sm_n);
 
