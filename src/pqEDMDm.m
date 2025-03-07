@@ -33,7 +33,7 @@ classdef pqEDMDm
     dyn_dcp = @pqDecomposition % Dynamic decomposition object.
 	end
   methods
-    function obj = pqEDMDm(system, varargin)
+    function obj = pqEDMDm(varargin)
       if nargin > 0
         % name-value attributes for constructor
         in = inputParser;
@@ -44,7 +44,7 @@ classdef pqEDMDm
         addOptional(in, 'dyn_dcp', obj.dyn_dcp);
 
 
-        parse(in, system, varargin{:});
+        parse(in, varargin{:});
 
         % obj.system = in.Results.system;
         obj.p = in.Results.p;
@@ -64,8 +64,8 @@ classdef pqEDMDm
       array_pqedmd = arrayfun(@(vfo) obj.dyn_dcp(vfo, system),vvfos);
     end
     function vvfos = get_observables(obj, system)
-      % creates an array of vvfos to evaluate the later.
-      % Gets the number of state variables
+      % creates an array of vvfos to evaluate later.
+      % Gets the number of variables
       l = size(system(1).y,2); % number of variables to observe
       % p q mesh
       [pm, qm] = meshgrid(obj.p, obj.q);
@@ -77,7 +77,7 @@ classdef pqEDMDm
       for obs = 1 : numel(vvfos)
         uniques(obs) = obj.compare(vvfos, obs);
       end
-      % Delete unnecassary vvfos
+      % Delete unnecessary vvfos
       vvfos(~uniques)=[];
     end
   end

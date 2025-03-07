@@ -79,7 +79,7 @@ for orb = 1 : num_ics
 		linspace(0,tfin,n_points), ...
 		ics(orb,:), ...
 		odeSettings);
-	exp_stch(orb).y = exp_stch(orb).y_cl + normrnd(0,.005,size(exp_stch(orb).y));
+	exp_stch(orb).y = exp_stch(orb).y_cl + normrnd(0,.1,size(exp_stch(orb).y));
 	exp_stch(orb).u = in(orb)*ones(size(exp(orb).t));
 end
 % Normalize the experiments
@@ -87,7 +87,7 @@ exp_nstch = normalize_data(exp_stch,[-1,1]);
 pen_edmd_stch = pqEDMDm( ...
 	p = [2 4 5],...
 	q = [0.5 1 1.5 2.0 2.5],...
-	observable = @legendreObservable,...
+	observable = @hermiteObservable,...
 	dyn_dcp = @svdDecomposition...
 	);
 % With the same svd decomposition, the approximation becomes
@@ -101,9 +101,9 @@ st_dcp = stch_dcps(st_bt);
 % Make the prediction from the test set
 stch_pred = st_dcp.pred_from_test(exp_nstch(ts));
 
-
+%%
 % Plot the result
-st_fig = figure(5);
+st_fig = figure(7);
 % instead of a phase plane, use a grid
 clf
 hold on
@@ -114,6 +114,9 @@ st_tsp = arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'r','LineWidth',2),exp_nstch(ts)
 tsa = arrayfun(@(ex)plot(ex.y(:,1),ex.y(:,2),'-.k','LineWidth',2),stch_pred);
 xlabel('$x_1$',Interpreter='latex')
 ylabel('$x_2$', Interpreter='latex')
-legend([trp(1), tsp(1), tsa(1)],{'training','testing','pqEDMD'},"Location","best")
+legend([st_trp(1), st_tsp(1), tsa(1)],{'training','testing','pqEDMD'},"Location","best")
 title("pqEDMD appx")
+set(gcf,'PaperPosition', [0, 0, 7, 7])
+%saveas(st_fig,"~/Documents/BioReactorConf/figures/b_phase_plane.fig")
+%saveas(st_fig,"~/Documents/BioReactorConf/figures/b_phase_plane.eps", "epsc")
 

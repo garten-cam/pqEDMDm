@@ -21,7 +21,8 @@ opts.ExtraColumnsRule = "ignore";
 opts.EmptyLineRule = "read";
 
 % Import the data
-dyndata = readtable("/home/cgarcia/Documents/pqEDMDm/examples/Temperature/dyn_data.csv", opts);
+
+dyndata = readtable(fileparts(mfilename("fullpath"))+"/dyn_data.csv", opts);
 
 
 %% Clear temporary variables

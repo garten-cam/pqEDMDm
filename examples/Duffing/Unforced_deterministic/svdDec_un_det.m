@@ -15,10 +15,10 @@ exp_unforced_det;
 exp = duff_exp;
 
 % Test the orthogonal pqEDMD
-ts = [2 4 5 6]; % index of training trajectories
-tr = [1 3];
+ts = [1 2 4 5 6]; % index of training trajectories
+tr = [3];
 
-tas_pq = pqEDMDm(p=[4 5 6], ... 
+tas_pq = pqEDMDm(p=[3 4 5 6], ... 
 	q=[0.5 1 1.5 2], ...
 	observable = @legendreObservable, ...
 	dyn_dcp = @svdDecomposition); % '' to use the ordinary least squares
@@ -27,7 +27,7 @@ dcps = tas_pq.fit(exp(tr));
 % Get the best performing decomposition
 err = zeros(numel(dcps),1);
 for decp = 1 : numel(dcps)
-	err(decp) = dcps(decp).abs_error(exp(ts));
+	err(decp) = dcps(decp).error(exp(ts));
 end
 
 [er_bst, best] = min(err);
@@ -35,7 +35,7 @@ dcp = dcps(best);
 
 appx = dcp.pred_from_test(exp(ts));
 
-tas_f = figure(1);
+dcp_plt = figure(1);
 clf
 hold on
 % plot the training set

@@ -2,6 +2,7 @@
 % the decomposition based on the singular value decomosition with
 % effectie rank
 clear variables
+rng(1)
 % call the script that simulates the experiments
 
 exp_forced_det_step

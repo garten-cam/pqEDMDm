@@ -2,8 +2,10 @@
 % the decomposition based on the singular value decomosition with
 % effectie rank
 clear variables
+rng(57)
 % call the script that simulates the experiments
-
+num_ics = 6;
+exp = duff
 exp_forced_stch_cos % I do not like this anymore
 
 % The same dilemma, to normalize or not to normalize.
@@ -12,13 +14,13 @@ exp = duff_exp;
 % Test the orthogonal pqEDMD
 % ts = [2 4 5 6]; % index of training trajectories
 % tr = [1 3];
-tr = [1, 2];
-ts = [3, 4, 5, 6];
+tr = 1:2;
+ts = 3:6;
 
 tas_pq = pqEDMDm(p=[2 3 4 5], ... [2 3 4 5], ...
 	q=[0.5 1 1.5 2 2.5], ...
 	observable = @hermiteObservable, ...
-	dyn_dcp = @(sy,ob)sidDecomposition(7,3,sy,ob)); % ''  to use the ordinary least squares
+	dyn_dcp = @(sy,ob)sidDecomposition(8,4,sy,ob)); % ''  to use the ordinary least squares
 dcps = tas_pq.fit(exp(tr));
 %%
 % Get the best performing decomposition from the error of the testing set
@@ -50,7 +52,7 @@ end
 % Plot the approximation
 for apxi = 1 : numel(appx)
 	nexttile(ts(apxi))
-	apxp = plot(exp(ts(apxi)).t, appx(apxi).y, '.-k');
+	apxp = plot(exp(ts(apxi)).t, appx(apxi).y, '-.k');
 end
 
 legend([det(1), trp(1), tsp(1), apxp(1)],{"determ","training", "testing", "approx"})

@@ -4,7 +4,7 @@
 clear variables
 % call the script that simulates the experiments
 
-exp_forced_det_step
+exp_forced_stch_step
 
 % The same dilemma, to normalize or not to normalize.
 % exp = normalize_data(duff_exp,[-1, 2]);
@@ -18,8 +18,8 @@ ts = 5:9;
 
 tas_pq = pqEDMDm(p=[2 3 4 5 6], ... 
 	q=[0.5 1 1.5 2], ...
-	observable = @legendreObservable, ...
-	dyn_dcp = @svdDecomposition); % ''  to use the ordinary least squares
+	observable = @pqObservable, ...
+	dyn_dcp = @svdDecomposition); %
 dcps = tas_pq.fit(exp(tr));
 
 %%

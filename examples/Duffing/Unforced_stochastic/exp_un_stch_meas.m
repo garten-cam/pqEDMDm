@@ -22,13 +22,15 @@ num_ics = 6; % Number of initial conditions for the test
 ics_width = 4; % ics range width
 % Create the initial conditions for the orbitst
 ics = ics_width*rand(num_ics,2) - ics_width/2;
-tfin = 30;
-n_points = 20*tfin + 1;
+tfin = 40;
+n_points = 10*tfin + 1;
 % Two asymptotically stable points response
 % parameters
 p.alpha = -1;
 p.beta = 1;
 p.delta = 0.5;
+% The noise
+sigma = 0.1;
 % The pqEDMD class accepts a structire array where the only necessary field
 % in the state variables. It is not a tensor, because not all the
 % trajectories are of the same lenght.
@@ -46,7 +48,7 @@ for orb = 1 : num_ics
 		ics(orb,:), ...
 		odeSettings);
 	duff_exp(orb).y_det = y;
-	duff_exp(orb).y = y + normrnd(0, 0.01, size(y));
+	duff_exp(orb).y = y + normrnd(0, sigma, size(y));
 end
 
 % From here, we can call the  different decompositions

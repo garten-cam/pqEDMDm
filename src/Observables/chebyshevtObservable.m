@@ -1,15 +1,15 @@
-classdef hermiteObservable < pqObservable
-    % HERMITEOBSERVABLE Creates an instace of a Hermite polynomials based
-    % function with a p-q-quasi norm reduction for l variables.
+classdef chebyshevtObservable < pqObservable
+    %CHEBYSHEVTOBSERVABLE Creates an instace of a ChebyshevT polynomials 
+		% based function with a p-q-quasi norm reduction for l variables.
 		%
 		% (a, b) = (-1, 1)
     % 
     % The order of the polynomials is not greater than p, and the quasi
     % norm of the indices per polonomial function is q.
     % 
-    %   O = HERMITEOBSERVABLE() 
+    %   O = CHEBYSHEVTOBSERVABLE() 
     % 
-    %   O = HERMITEOBSERVABLE(p, q, l) 
+    %   O = CHEBYSHEVTOBSERVABLE(p, q, l) 
     % 
     
     methods
@@ -25,4 +25,3 @@ classdef hermiteObservable < pqObservable
         end
     end
 end
-

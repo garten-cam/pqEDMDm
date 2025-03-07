@@ -4,7 +4,6 @@ classdef sidDecomposition < svdDecomposition
 		K % Kalman gain of the solution
 		fb % number of Hankel blocks for the Future calculations
 		pb % Past blocks.
-		Cedmd % C matrix to return to space state
 	end
 	properties (Hidden)
 		det
@@ -12,36 +11,24 @@ classdef sidDecomposition < svdDecomposition
 		n_cols % Number of columns in each sample
 	end
 	methods
-		function obj = sidDecomposition(fb, pb, observable, system)
+		function obj = sidDecomposition(fb, pb, observable, data)
 			%SIDDECOMPOSITION computes the subspace identification of the EDMD
 			if nargin > 0
 				obj.obs = observable;
-				[yeval_sys, u_sys] = obj.yu_eval(system);
-				if isfield(system, 'u')
-					obj.m = size(system(1).u,2);
-					obj.unforced = false;
-					if ~pb
-						obj.det = true;
-						obj.pb = 1;
-					else
-						obj.det = false;
-						obj.pb = pb;
-					end
-					obj.pb = max(1,pb); % Hankel blocks for the past
-					% if forced, pb at least 1
-				else
+				[yeval_sys, u_sys] = obj.yu_eval(data);
+
+				obj.unforced = ~isfield(data, 'u');
+				obj.det = ~(pb > 0);
+				if obj.unforced
 					obj.m = 0;
-					obj.unforced = true;
-					if ~pb
-						obj.pb = 1;
-						obj.det = true;
-					else
-						obj.pb = pb;
-						obj.det = false;
-					end
+				else
+					obj.m = size(data(1).u,2);
 				end
-				obj.num_obs = size(obj.obs.polynomials_order, 2); % number of outputs, number of observables
+				obj.num_obs = size(obj.obs.polynomials_order, 2) + 1; % number of outputs, number of observables
 				obj.fb = fb; % Hankel blocks for the future
+				% we need at least one past block
+				obj.pb = max(pb,1);
+				% obj.pb = pb;
 				obj.l = obj.obs.l; % Number of state variables
 				% Hankelize
 				% Ysid = [Yp;Yf]
@@ -57,8 +44,7 @@ classdef sidDecomposition < svdDecomposition
 				% Get the system
 				[obj.A, obj.B, obj.C, obj.D, obj.K, obj.n] = obj.ABCDKn(Ysid, Usid);
 				% back to the state
-				Cedmd = obj.matrix_C; % cannot calculate and slice in the same line
-				obj.Cedmd = Cedmd(:,2:end);
+				obj.Cob = obj.matrix_C;
 			end
 		end
 		function [a, b, c, d, k, n] = ABCDKn(obj, Ysid, Usid)
@@ -69,8 +55,8 @@ classdef sidDecomposition < svdDecomposition
 			[~, midx] = min(nv);
 			% It is cheaper to test all and select the best than to optimize.
 			n = ns(midx);
-			% calculate everything that the "optimization" calculates inside. For
-			% the best of the orders n. Maybe save and index?
+			% calculate everything that the "optimization" calculates inside for
+			% the best of the orders n. Maybe save and index? Nah...
 			[~, res, a, b, c, d] = obj.n_cost(n, U, S, Ysid, Usid);
 			SigWE = res*res'/(size(res,2)-1);
 			QQ = SigWE(1:obj.n,1:obj.n);
@@ -94,7 +80,6 @@ classdef sidDecomposition < svdDecomposition
 				end
 			else
 				Oi = cellfun(@(yi,ui,wi){obj.obliqueP(yi,ui,wi)},y_f, u_f, w_p);
-				% WOW a la MOESP
 				WOW = cell2mat(cellfun(@(oii,ui){obj.zProjOx(oii,ui)},Oi,u_f));
 			end
 			[u,s,~] = svd(WOW,"econ");
@@ -150,50 +135,36 @@ classdef sidDecomposition < svdDecomposition
 				'y', zeros(x, obj.obs.l)), n_points);
 			obsf  = obj.obs.obs_function;
 			% C inverse to get the state
-			Cinv = pinv(obj.C);
+			Ci = pinv(obj.C);
 			% Simulate
 			for orb = 1 : size(y0,1) % for all initial conditions
 				pred(orb).y(1,:) = y0(orb,:); % Save the initial output
 				% Save the initial state
 				% pred(orb).sv(1,:) = Cinv*(obsf(pred(orb).y(1,:))'-obj.D*u{orb}(1,:)');
-				pred(orb).sv(1,:) = Cinv*(obsf(pred(orb).y(1,:))');
+				pred(orb).sv(1,:) = Ci*([1; obsf(pred(orb).y(1,:))']);
 				for step = 2 : n_points(orb)
 					% Lift the previous output
-					lft = obsf(pred(orb).y(step-1,:));
+					lft = [1 obsf(pred(orb).y(step-1,:))];
 					% Lifted output to state space
-					x_prev = Cinv*(lft');
+					x_prev = Ci*(lft');
 					% Evolve
 					x_post = obj.A*x_prev + obj.B*u{orb}(step,:)';
 					% Save the state
 					pred(orb).sv(step,:) = x_post';
 					% Save the output
-					pred(orb).y(step,:) = obj.Cedmd*(obj.C*x_post + obj.D*u{orb}(step,:)');
+					pred(orb).y(step,:) = obj.Cob*(obj.C*x_post + obj.D*u{orb}(step-1,:)');
 				end
 			end
 		end
-		function err = error(obj, system)
-			% Get the prediction to calculate the error
-			pred = obj.pred_from_test(system);
-			xts_mat = cell2mat(arrayfun(@(x) {x.y}, system));
-			pred_mat = cell2mat(arrayfun(@(x) {x.y}, pred));
-			err = sum(abs(xts_mat-pred_mat)./(abs(xts_mat)+eps),"all")/length(xts_mat)/obj.obs.l;
-		end
-		function err = abs_error(obj, xts)
-			% Get the prediction to calculate the absolute error
-			pred = obj.pred_from_test(xts);
-			xts_mat = cell2mat(arrayfun(@(x) {x.y}, xts));
-			pred_mat = cell2mat(arrayfun(@(x) {x.y}, pred));
-			err = sum(abs(xts_mat-pred_mat),"all")/length(xts_mat)/obj.obs.l;
-		end
-		function [yev, u] = yu_eval(obj, system)
+		function [yev, u] = yu_eval(obj, data)
 			% lifting
 			obsrv = obj.obs.obs_function;
-			yev = arrayfun(@(sys) {obsrv(sys.y)}, system);
+			yev = arrayfun(@(sys) {[ones(size(sys.y,1),1) obsrv(sys.y)]}, data);
 			% extract the inputs into a cell
-			if ~isfield(system,'u')
+			if ~isfield(data,'u')
 				u = [];
 			else
-				u = {system.u}';
+				u = {data.u}';
 			end
 		end
 		function xPzAy = obliqueP(obj, X, Y, Z)
@@ -204,10 +175,10 @@ classdef sidDecomposition < svdDecomposition
 			% orthogonal complement of Y
 			% X/(oY)
 			xPOy = obj.zProjOx(X, Y);
-			% Z/(oY)
-			zPoy_i = pinv(obj.zProjOx(Z, Y));
+			% Z/(oY) inv
+			zPOy_i = pinv(obj.zProjOx(Z, Y));
 			% Ready for the projection of X onto Z along Y
-			xPzAy = xPOy*zPoy_i*Z;
+			xPzAy = xPOy*zPOy_i*Z;
 		end
 		function [y_f, u_f, w_p] = fut_pst_mat(obj, Ysid, Usid)
 			y_f = cellfun(@(y_i){y_i(end-obj.fb*(obj.num_obs)+1:end,:)},Ysid);
@@ -215,7 +186,7 @@ classdef sidDecomposition < svdDecomposition
 			w_p = cellfun(@(ui,yi){[ui(1:obj.pb*obj.m,:);yi(1:obj.pb*obj.num_obs,:)]},Usid, Ysid);
 		end
 		function [x_p, x_f, yii_p, u_fp, u_ff] = edmd_like_division(obj, x, y_f, u_f)
-			% edmd_like_division p:past f:future
+			% edmd_like_division p: past f: future
 			x_p = cellfun(@(xi){xi(:,1:end-1)},x);
 			x_f = cellfun(@(xi){xi(:,2:end)},x);
 			yii_p = cellfun(@(yi,xi){yi(1:obj.num_obs,1:width(xi)-1)},y_f,x);
@@ -235,11 +206,15 @@ classdef sidDecomposition < svdDecomposition
 			% of x. z/_x
 			zp_x = z*x'*pinv(x*x')*x;
 		end
-		function H = block_hankel(mat, hb, nb)
-			% block_hankel turns a matrix into a Hankel Matrix with hb+nb number
+		function H = block_hankel(mat, fb, pb)
+			% block_hankel turns a matrix into a Hankel Matrix with fb+pb number
 			% of Hankel blocks.
-			n_col = width(mat) - hb - nb + 1; %  leave it as two lines for clarity
-			H = cell2mat(arrayfun(@(blk){mat(:,blk:blk+n_col - 1)}',1:(hb+nb))');
+			% mat: is the matrix to hankelize
+			% fb : is the number of "future" blocks
+			% pb : is the number of "past" blocks
+			H = cell2mat(arrayfun(@(blk) ...
+				{mat(:, blk : blk + (width(mat) - fb - pb + 1) - 1)}', ...
+				1:(fb + pb))');
 		end
 	end % end static methods
 end % end class
