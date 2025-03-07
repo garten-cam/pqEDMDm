@@ -17,16 +17,16 @@ exp = duff_exp;
 ts = [2 4 5 6]; % index of training trajectories
 tr = [1 3];
 
-tas_pq = pqEDMDm(p=[3 4 5 6], ... 
-	q=[0.5 1 1.5 2], ...
+tas_pq = pqEDMDm(p=[1], ... 
+	q=[inf], ...
 	observable = @legendreObservable, ...
-	dyn_dcp = @(obs,sys)sidDecomposition(4,0,obs,sys));
+	dyn_dcp = @(obs,sys)sidDecomposition(10, 0,obs,sys));
 dcps = tas_pq.fit(exp(tr));
 %%
 % Get the best performing decomposition
 err = zeros(numel(dcps),1);
 for decp = 1 : numel(dcps)
-	err(decp) = dcps(decp).abs_error(exp(ts));
+	err(decp) = dcps(decp).error(exp(ts));
 end
 
 [er_bst, best] = min(err);
@@ -34,7 +34,7 @@ dcp = dcps(best);
 
 appx = dcp.pred_from_test(exp(ts));
 
-tas_f = figure(1);
+tas_f = figure(2);
 clf
 hold on
 % plot the training set

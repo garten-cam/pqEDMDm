@@ -2,22 +2,23 @@ classdef pqDecomposition
 	%PQDECOMPOSITION parent class for all the decompositions.
 	%
 	% Returns a set of matrices characterizing a system based on the pqEDMD
-	% algorithm.
+	% algorithm and the provided data.
 	properties % input properties
 		obs % input property of every decomposition. The observable
 	end
 	properties % calculated properties
-		A % Evolution Matrix psi(x) = A*psi(x) + B*u
-		B % Input matrix              this one   ^
-		C % Output matrix y = C*psi(x) + D*u
+		A		% Evolution Matrix psi(x) = A*psi(x) + B*u
+		B		% Input matrix              this one   ^
+		C		% Output matrix psi(y) = C*psi(x) + D*u
+		Cob	% Observables output matrix y = Cob*psi(y)
 		D % Input Output matrix
-		l % Number of outputs, in this case original states
+		l % Number of outputs
 		m % Number of inputs
 		n % Number of states, in this case, number of observables
 		num_obs % Number of observables
 	end
 	methods
-		function obj = pqDecomposition(observable, system)
+		function obj = pqDecomposition(observable, data)
 			%PQDECOMPOSITION Class constructor. Recieves an observable and a set
 			%of trajectories/experimets/samples and  returns the A, B, and C
 			%matrices of an EDMD.
@@ -28,19 +29,19 @@ classdef pqDecomposition
 				
 				obj.obs = observable; % saves the observable object
 				
-				[obs_pst, obs_fut] = obj.y_snapshots(system);
+				[obs_pst, obs_fut] = obj.y_snapshots(data);
 				
-				if isfield(system,'u')
-					obj.m = size(system(1).u, 2);
-					[u_pst, u_fut] = obj.u_snapshots(system);
+				if isfield(data,'u')
+					obj.m = size(data(1).u, 2);
+					[u_pst, u_fut] = obj.u_snapshots(data);
 					obs_pst = [obs_pst u_pst];
 					obs_fut = [obs_fut u_fut];
 				else
 					obj.m = 0;
 				end
-				obj.num_obs = size(obj.obs.polynomials_order, 2);
-				% from the snapshots, get the regression
-				
+				obj.num_obs = size(obj.obs.polynomials_order, 2) + 1;
+
+				% Get the regression from the snapshots				
 				U = obj.regression(obs_fut, obs_pst); % This is the transpose of U
 				
 				obj.l = obj.obs.l;
@@ -51,8 +52,9 @@ classdef pqDecomposition
 				% executes the whole get method.
 				obj.A = obj.matrix_A(U);
 				obj.B = obj.matrix_B(U);
-				obj.C = obj.matrix_C;
-				obj.D = zeros(obj.l,max(1,obj.m));
+				obj.C = eye(obj.num_obs); % In these decompositions psi(y)=x
+				obj.Cob = obj.matrix_C;
+				obj.D = zeros(obj.num_obs,max(1,obj.m));
 			end
 		end
 		function u = regression(obj, obs_fut, obs_pst)
@@ -62,7 +64,7 @@ classdef pqDecomposition
 			u = g\a;
 		end
 		function a = matrix_A(obj, U)
-			% get the A matrix from the system x = Ax
+			% get the A matrix from the data x = Ax
 			a = U(1:end-obj.m, 1:end-obj.m)';
 		end
 		function b = matrix_B(obj, U)
@@ -100,54 +102,54 @@ classdef pqDecomposition
 					% Lift the previous output
 					x_prev = [1 obsf(pred(orb).y(step-1,:))];
 					% Evolve the "state"
-					x_post = obj.A*x_prev' + obj.B*u{orb}(step,:)';
+					x_post = obj.A*x_prev' + obj.B*u{orb}(step-1,:)';
 					% Apply the output function
-					pred(orb).y(step,:) = (obj.C*x_post + obj.D*u{orb}(step,:)')';
+					pred(orb).y(step,:) = (obj.Cob*(obj.C*x_post + obj.D*u{orb}(step,:)'))';
 				end
 			end
 		end
-		function err = error(obj, yts)
+		function err = error(obj, data)
 			% error returns the error over all the provided testing
 			% samples
 			% Get the prediction to calculate error
-			pred = obj.pred_from_test(yts);
+			pred = obj.pred_from_test(data);
 			% e = (y-hat(y))/y , normalized by the number of points, num of outs
 			% and num of testing trajectories
 			err = sum(arrayfun(@(y,hy) ... y in the training set and hat(y) in the prediction
 				sum(abs(y.y-hy.y)./(abs(y.y)+eps),"all")/length(y.y)/obj.obs.l,...
-				yts,pred))/numel(yts);
+				data,pred))/numel(data);
 		end
-		function err = abs_error(obj, yts)
+		function err = abs_error(obj, data)
 			% error returns the error over all the provided testing
 			% samples
 			% Get the prediction to calculate error
-			pred = obj.pred_from_test(yts);
+			pred = obj.pred_from_test(data);
 			% e = (y-hat(y)) , normalized by the number of points, num of outs
 			% and num of testing trajectories
 			err = sum(arrayfun(@(y,hy) ... y in the training set and hat(y) in the prediction
 				sum(abs(y.y-hy.y),"all")/length(y.y)/obj.obs.l,...
-				yts,pred))/numel(yts);
+				data,pred))/numel(data);
 		end
-		function pred = pred_from_test(obj, system)
+		function pred = pred_from_test(obj, data)
 			% predict all the xts for this decomposition:
 			% extract the initial conditions
-			y0 = cell2mat(arrayfun(@(x) {x.y(1, :)}, system));
+			y0 = cell2mat(arrayfun(@(x) {x.y(1, :)}, data));
 			% extract the numper of points per orbit
-			np = arrayfun(@(x) size(x.y,1), system);
+			np = arrayfun(@(x) size(x.y,1), data);
 			% preallocate
 			% I have to deal with the inputs. This was wrong....
-			if isfield(system, "u")
-				pred = obj.predict(y0, np, {system.u});
+			if isfield(data, "u")
+				pred = obj.predict(y0, np, {data.u});
 			else
 				pred = obj.predict(y0, np);
 			end
 		end
-		function [y_obs_pst, y_obs_fut] = y_snapshots(obj, system)
+		function [y_obs_pst, y_obs_fut] = y_snapshots(obj, data)
 			obsrv = obj.obs.obs_function;
 			y_obs_pst = cell2mat(arrayfun(@(trj) ...
-				{[ones(size(trj.y,1)-2,1) obsrv(trj.y(1:end-2,:))]}, system));
+				{[ones(size(trj.y,1)-2,1) obsrv(trj.y(1:end-2,:))]}, data));
 			y_obs_fut = cell2mat(arrayfun(@(trj) ...
-				{[ones(size(trj.y,1)-2,1) obsrv(trj.y(2:end-1,:))]}, system));
+				{[ones(size(trj.y,1)-2,1) obsrv(trj.y(2:end-1,:))]}, data));
 		end
 		function spectrum(obj)
 			figure()
@@ -158,12 +160,11 @@ classdef pqDecomposition
 		end
 	end
 	methods (Static)
-		function [u_pst, u_fut] = u_snapshots(system)
+		function [u_pst, u_fut] = u_snapshots(data)
 			u_pst = cell2mat(arrayfun(@(trj) ...
-				{trj.u(1:end-2,:)}, system));
+				{trj.u(1:end-2,:)}, data));
 			u_fut = cell2mat(arrayfun(@(trj) ...
-				{trj.u(2:end-1,:)}, system));
+				{trj.u(2:end-1,:)}, data));
 		end
-		
 	end
 end

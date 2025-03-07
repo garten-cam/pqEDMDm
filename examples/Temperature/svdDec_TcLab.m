@@ -1,6 +1,6 @@
 % Script for the application of the pqEDMD to the TcLab
 % get the data from the file
-clear variables
+% clear variables
 dataTcL
 dyndata = table2array(dyndata);
 tot_sam = height(dyndata);

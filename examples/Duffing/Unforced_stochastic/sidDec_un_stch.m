@@ -18,9 +18,9 @@ ts = [2 4 5 6]; % index of training trajectories
 tr = [1 3];
 
 tas_pq = pqEDMDm(p=[3 4 5], ... p=[2 3 4 5]
-	q=[2 2.5], ...
+	q=[0.5 1 1.5 2 2.5], ...
 	observable = @legendreObservable, ...
-	dyn_dcp = @(ob,sy)sidDecomposition(1,1,ob,sy)); % '' to use the ordinary least squares
+	dyn_dcp = @(ob,sy)sidDecomposition(10,8,ob,sy)); % '' to use the ordinary least squares
 dcps = tas_pq.fit(exp(tr));
 %%
 % Get the best performing decomposition
@@ -34,7 +34,7 @@ dcp = dcps(best);
 
 appx = dcp.pred_from_test(exp(ts));
 
-tas_f = figure(1);
+tas_f = figure(3);
 clf
 hold on
 % plot the deterministic samples
