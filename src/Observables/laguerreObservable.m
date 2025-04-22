@@ -1,4 +1,4 @@
-classdef laguerreObservable < pqObservable
+ classdef laguerreObservable < pqObservable
     % laguerreObservable Creates an instace of a Hermite polynomials based
     % function with a p-q-quasi norm reduction for 'l' variables and an 'a' 
     % paramter value.

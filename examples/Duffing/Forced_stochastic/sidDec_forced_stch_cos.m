@@ -5,7 +5,7 @@ clear variables
 rng(57)
 % call the script that simulates the experiments
 num_ics = 6;
-exp = duff
+% exp = duff
 exp_forced_stch_cos % I do not like this anymore
 
 % The same dilemma, to normalize or not to normalize.
