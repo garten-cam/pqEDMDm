@@ -43,25 +43,25 @@ violet  = "#B711FC";
 purple  = "#7021F3";
 cyan			 = "#11FCB7";
 springreen = "#21F370";
-svd_fig = figure();
+svd_fig = figure(1);
 clf
 hold on
 % Plot training temperatures
-plot(samples(tr).t, samples(tr).y(:,1), '.', "Color", hex2rgb(orange), "MarkerSize", 10)
-plot(samples(tr).t, samples(tr).y(:,2), '.', "Color", hex2rgb(yellow), "MarkerSize", 10)
+plot(samples(tr).t, samples(tr).y(:,1), '.', "Color", orange, "MarkerSize", 10)
+plot(samples(tr).t, samples(tr).y(:,2), '.', "Color", yellow, "MarkerSize", 10)
 % Plot testing temperatures (inverted colors)
-plot(samples(ts).t, samples(ts).y(:,1), '.', "Color", hex2rgb(violet), "MarkerSize", 10)
-plot(samples(ts).t, samples(ts).y(:,2), '.', "Color", hex2rgb(purple), "MarkerSize", 10)
+plot(samples(ts).t, samples(ts).y(:,1), '.', "Color", violet, "MarkerSize", 10)
+plot(samples(ts).t, samples(ts).y(:,2), '.', "Color", purple, "MarkerSize", 10)
 % Plot the heat inputs
-plot(data.t, data.Q1, '--', "Color", hex2rgb(blue), "LineWidth", 2)
-plot(data.t, data.Q2, '--', "Color", hex2rgb(green), "LineWidth", 2)
+plot(data.t, data.Q1, '--', "Color", blue, "LineWidth", 2)
+plot(data.t, data.Q2, '--', "Color", green, "LineWidth", 2)
 % Plot the approximation
-plot(samples(ts).t, svd_tst.y(:,1), "Color",hex2rgb(cyan), "LineWidth", 3)
-plot(samples(ts).t, svd_tst.y(:,2), "Color",hex2rgb(springreen), "LineWidth", 3)
+plot(samples(ts).t, svd_tst.y(:,1), "Color", cyan, "LineWidth", 3)
+plot(samples(ts).t, svd_tst.y(:,2), "Color", springreen, "LineWidth", 3)
 xlabel("t [s]","Interpreter","latex")
 ylabel("($^\circ$C) \& ($\%$)", "Interpreter","latex")
 legend("T1","T2","T1","T2","Q1","Q2","App1","App2",Location="northoutside",Orientation="horizontal")
 
-% set(gcf,"PaperPosition",[0,0,20,4])
-% saveas(svd_fig,strcat("~/Documents/Seminar/figures/", "appx.fig"))
-% saveas(svd_fig,strcat("~/Documents/Seminar/figures/", "appx.eps"), "epsc")
+set(gcf,"PaperPosition",[0,0,20,10])
+saveas(svd_fig,strcat("~/Documents/Seminar/figures/", "appx.fig"))
+saveas(svd_fig,strcat("~/Documents/Seminar/figures/", "appx.eps"), "epsc")
