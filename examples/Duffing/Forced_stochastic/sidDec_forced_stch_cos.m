@@ -2,37 +2,37 @@
 % the decomposition based on the singular value decomosition with
 % effectie rank
 clear variables
-rng(57)
+rng(1234)
 % call the script that simulates the experiments
 num_ics = 6;
-% exp = duff
-exp_forced_stch_cos % I do not like this anymore
+exp = duff_stch_forced_cos( ...
+	num_ics, ... # of initial conditions
+	round(normrnd(15,2,num_ics,1)), ... # final time of all experiments
+	0.1, ... Standard deviation for the noise addition
+	20); % point multiplier sets the sampling time number of points = mult*tfin + 1
 
-% The same dilemma, to normalize or not to normalize.
-% exp = normalize_data(duff_exp,[-1, 1]);
-exp = duff_exp;
 % Test the orthogonal pqEDMD
 % ts = [2 4 5 6]; % index of training trajectories
 % tr = [1 3];
-tr = 1:2;
-ts = 3:6;
-
-tas_pq = pqEDMDm(p=[2 3 4 5], ... [2 3 4 5], ...
-	q=[0.5 1 1.5 2 2.5], ...
-	observable = @hermiteObservable, ...
-	dyn_dcp = @(sy,ob)sidDecomposition(8,4,sy,ob)); % ''  to use the ordinary least squares
-dcps = tas_pq.fit(exp(tr));
+tr = 1:num_ics-2;
+ts = num_ics-1:num_ics;
 %%
+tas_pq = pqEDMDm(p=[2 3 4], ... [2 3 4 5], ...
+	q=[0.5 1 1.5 2], ...
+	observable = @legendreObservable, ...
+	dyn_dcp = @(sy,ob)sidDecomposition(2,4,sy,ob)); % ''  to use the ordinary least squares
+dcps = tas_pq.fit(exp(tr));
+%
 % Get the best performing decomposition from the error of the testing set
-err = arrayfun(@(dcpi)dcpi.abs_error(exp(ts)),dcps);
+err = arrayfun(@(dcpi)dcpi.abs_error(exp(ts)),dcps)
 
 [er_bst, best] = min(err);
 dcp = dcps(best);
 
 appx = dcp.pred_from_test(exp(ts));
-
+%
 tas_f = figure(1);
-tl = tiledlayout('vertical','TileSpacing','tight');
+tl = tiledlayout('flow','TileSpacing','tight','Padding','tight');
 % Plot the deterministic samples
 for ex = 1 : numel(exp)
 	nexttile(ex);

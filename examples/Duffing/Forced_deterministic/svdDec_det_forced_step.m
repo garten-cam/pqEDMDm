@@ -5,11 +5,15 @@ clear variables
 rng(1)
 % call the script that simulates the experiments
 
-exp_forced_det_step
+num_ics = 9;
+exp = duff_det_forced_step( ...
+	num_ics, ... # of initial conditions
+	round(normrnd(20,2,num_ics,1)), ... # final time of all experiments
+	50); % point multiplier sets the sampling time number of points = mult*tfin + 1
 
 % The same dilemma, to normalize or not to normalize.
 % exp = normalize_data(duff_exp,[-1, 2]);
-exp = duff_exp;
+% exp = duff_exp;
 
 % Test the orthogonal pqEDMD
 % ts = [2 4 5 6]; % index of training trajectories
@@ -33,7 +37,7 @@ end
 [er_bst, best] = min(err);
 dcp = dcps(best);
 
-appx = dcp.pred_from_test(exp(ts));
+appx = dcp.pred_from_test_lift(exp(ts));
 
 tas_f = figure(1);
 clf

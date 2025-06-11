@@ -1,4 +1,4 @@
-function duff_exp = duff_stch_forced_cos(num_ics, tfin, point_multiplier)
+function duff_exp = duff_stch_forced_cos(num_ics, tfin, sigma, p_mult)
 	% Script to generate the samples for testing the different algorithms using
 	% the forced and deterministic Duffing equation.
 	% The stochastic part is in the measurement
@@ -22,7 +22,7 @@ function duff_exp = duff_stch_forced_cos(num_ics, tfin, point_multiplier)
 	% Create the initial conditions for the orbitst
 	ics = ics_width*rand(num_ics,2) - ics_width/2;
 	% points according to multiplyer
-	n_points = point_multiplier * tfin + 1;
+	n_points = p_mult * tfin + 1;
 	% Two asymptotically stable points response
 	% parameters
 	p.alpha = -1;
@@ -31,8 +31,10 @@ function duff_exp = duff_stch_forced_cos(num_ics, tfin, point_multiplier)
 	% Input parameters. In DuffEqODEu, the input is u(t)=gamma*cos(omega*t)
 	u = arrayfun(@(omegai,gammai)struct('gamma',gammai,'omega',omegai),4*rand(num_ics,1)-2,1*rand(num_ics,1));
 	% preallocate the output
-	duff_exp = arrayfun(@(exp)struct('t',zeros(n_points,1),...
-		'y',zeros(n_points,2),'u', zeros(n_points,1)),u);
+	duff_exp = arrayfun(@(npi)struct( ...
+		't',zeros(npi,1),...
+		'y',zeros(npi,2), ...
+		'u', zeros(npi,1)), n_points);
 	odeSettings = odeset('RelTol',1e-3,'AbsTol',1e-6);
 	for orb = 1 : num_ics
 		[duff_exp(orb).t, y] = ode23(@(t,x)DuffEqODEu(t,x,p, ...
@@ -41,7 +43,7 @@ function duff_exp = duff_stch_forced_cos(num_ics, tfin, point_multiplier)
 			ics(orb,:), ...
 			odeSettings);
 		duff_exp(orb).y_det = y;
-		duff_exp(orb).y = y + normrnd(0, 0.01, size(y));
+		duff_exp(orb).y = y + normrnd(0, sigma, size(y));
 		duff_exp(orb).u = u(orb).gamma*cos(u(orb).omega*duff_exp(orb).t);
 	end
 end

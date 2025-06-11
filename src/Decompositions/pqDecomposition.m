@@ -40,8 +40,8 @@ classdef pqDecomposition
 					obj.m = 0;
 				end
 				obj.num_obs = size(obj.obs.polynomials_order, 2) + 1;
-
-				% Get the regression from the snapshots				
+				
+				% Get the regression from the snapshots
 				U = obj.regression(obs_fut, obs_pst); % This is the transpose of U
 				
 				obj.l = obj.obs.l;
@@ -93,7 +93,7 @@ classdef pqDecomposition
 			% preallocate
 			pred = arrayfun(@(x) struct('y', zeros(x, obj.obs.l)), n_points);
 			% assign the initial condition
-			
+
 			obsf = obj.obs.obs_function;
 			for orb = 1 : size(y0,1) % For all the initial conditions
 				% Just save the initial output
@@ -105,6 +105,30 @@ classdef pqDecomposition
 					x_post = obj.A*x_prev' + obj.B*u{orb}(step-1,:)';
 					% Apply the output function
 					pred(orb).y(step,:) = (obj.Cob*(obj.C*x_post + obj.D*u{orb}(step,:)'))';
+				end
+			end
+		end
+		function pred = predict_lift(obj, y0, n_points, u)
+			if nargin < 4
+				u = arrayfun(@(x) {zeros(x,1)}, n_points);
+			end
+			% preallocate
+			pred = arrayfun(@(x) struct('y', zeros(x, obj.obs.l)), n_points);
+			% assign the initial condition
+
+			obsf = obj.obs.obs_function;
+			for orb = 1 : size(y0,1) % For all the initial conditions
+				% Just save the initial output
+				pred(orb).y(1,:) = y0(orb,:);
+				% linfting the initial condition
+				x = [1 obsf(pred(orb).y(1,:))];
+				for step = 2 : n_points(orb)
+					% Lift the previous output
+					% x_prev = [1 obsf(pred(orb).y(step-1,:))];
+					% Evolve the "state"
+					x = (obj.A*x' + obj.B*u{orb}(step-1,:)')';
+					% Apply the output function
+					pred(orb).y(step,:) = (obj.Cob*(obj.C*x' + obj.D*u{orb}(step,:)'))';
 				end
 			end
 		end
@@ -142,6 +166,20 @@ classdef pqDecomposition
 				pred = obj.predict(y0, np, {data.u});
 			else
 				pred = obj.predict(y0, np);
+			end
+		end
+		function pred = pred_from_test_lift(obj, data)
+			% predict all the xts for this decomposition:
+			% extract the initial conditions
+			y0 = cell2mat(arrayfun(@(x) {x.y(1, :)}, data));
+			% extract the numper of points per orbit
+			np = arrayfun(@(x) size(x.y,1), data);
+			% preallocate
+			% I have to deal with the inputs. This was wrong....
+			if isfield(data, "u")
+				pred = obj.predict_lift(y0, np, {data.u});
+			else
+				pred = obj.predict_lift(y0, np);
 			end
 		end
 		function [y_obs_pst, y_obs_fut] = y_snapshots(obj, data)

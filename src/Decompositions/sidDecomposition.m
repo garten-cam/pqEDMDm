@@ -29,13 +29,14 @@ classdef sidDecomposition < svdDecomposition
 				% we need at least one past block
 				obj.pb = max(pb,1);
 				% obj.pb = pb;
-				obj.l = obj.obs.l; % Number of state variables
+				obj.l = obj.obs.l; % Number of outputs
 				% Hankelize
 				% Ysid = [Yp;Yf]
-				Ysid = cellfun(@(sys){obj.block_hankel(sys', obj.fb, obj.pb)},yeval_sys)'; %%% the same 2hb
+				Ysid = cellfun(@(sys){obj.block_hankel(sys', obj.fb, obj.pb)},yeval_sys)'; % the same 2hb
 				% Usid=[Up;Uf]
 				if obj.unforced
-					% create all the empty matrices
+					% create empty matrices for the input when the system is
+					% unforced
 					Usid = cellfun(@(sys){zeros(0,width(sys))},Ysid);
 				else
 					Usid = cellfun(@(x) ...
