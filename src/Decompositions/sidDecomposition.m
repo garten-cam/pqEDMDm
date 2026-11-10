@@ -2,6 +2,8 @@ classdef sidDecomposition < svdDecomposition
 	%SIDDECOMPOSITION subsytem identification EDMD
 	properties
 		K % Kalman gain of the solution
+    P % Stabilizing solution
+    L % Eigenvalues of the (A_S - KC_S)
 		fb % number of Hankel blocks for the Future calculations
 		pb % Past blocks.
 	end
@@ -17,7 +19,7 @@ classdef sidDecomposition < svdDecomposition
 				obj.obs = observable;
 				[yeval_sys, u_sys] = obj.yu_eval(data);
 
-				obj.unforced = ~isfield(data, 'u');
+				obj.unforced = ~(isfield(data, 'u')|all(isprop(data,'u')));
 				obj.det = ~(pb > 0);
 				if obj.unforced
 					obj.m = 0;
@@ -43,27 +45,30 @@ classdef sidDecomposition < svdDecomposition
 						{obj.block_hankel(x', obj.fb, obj.pb)},u_sys)';
 				end
 				% Get the system
-				[obj.A, obj.B, obj.C, obj.D, obj.K, obj.n] = obj.ABCDKn(Ysid, Usid);
+				[obj.A, obj.B, obj.C, obj.D, obj.K, obj.P, obj.L, obj.n] = obj.ABCDKn(Ysid, Usid);
 				% back to the state
 				obj.Cob = obj.matrix_C;
 			end
 		end
-		function [a, b, c, d, k, n] = ABCDKn(obj, Ysid, Usid)
+		function [a, b, c, d, k, p, l, n] = ABCDKn(obj, Ysid, Usid)
 			[U, S] = obj.compute_svd(Ysid, Usid);
-			ns = obj.num_obs:sum(diag(S)>1e-9);
+			% ns = obj.num_obs+1:max(sum(diag(S)>1e-9),obj.num_obs+1);
+      ns = obj.num_obs:max(sum(diag(S)>1e-9),obj.num_obs);
+      % ns = obj.num_obs+1:obj.num_obs+3;
 			% Optimice for n
 			nv = arrayfun(@(n)obj.n_cost(n, U, S, Ysid, Usid), ns);
 			[~, midx] = min(nv);
-			% It is cheaper to test all and select the best than to optimize.
+			% It is cheaper to all and select the best than to optimize.
 			n = ns(midx);
 			% calculate everything that the "optimization" calculates inside for
 			% the best of the orders n. Maybe save and index? Nah...
 			[~, res, a, b, c, d] = obj.n_cost(n, U, S, Ysid, Usid);
 			SigWE = res*res'/(size(res,2)-1);
-			QQ = SigWE(1:obj.n,1:obj.n);
-			RR = SigWE(obj.n+1:obj.n+obj.num_obs,obj.n+1:obj.n+obj.num_obs);
+      % SigWE = res*res';
+			QQ = SigWE(1:n,1:n);
+			RR = SigWE(n+1:n+obj.num_obs,n+1:n+obj.num_obs);
 			SS = SigWE(1:obj.n,obj.n+1:obj.n+obj.num_obs);
-			[~,k,~,~] = idare(a',c',QQ,RR,SS); % Kalman filter ARE
+			[p,k,l,~] = idare(a',c',QQ,RR,SS); % Kalman filter ARE
 			k = k'; % Kalman gain
 			if obj.m == 0 % redefine so they are zeroes instead of empties
 				b = zeros(n,1);
@@ -81,6 +86,7 @@ classdef sidDecomposition < svdDecomposition
 				end
 			else
 				Oi = cellfun(@(yi,ui,wi){obj.obliqueP(yi,ui,wi)},y_f, u_f, w_p);
+                % A la MOESP
 				WOW = cell2mat(cellfun(@(oii,ui){obj.zProjOx(oii,ui)},Oi,u_f));
 			end
 			[u,s,~] = svd(WOW,"econ");
@@ -113,7 +119,7 @@ classdef sidDecomposition < svdDecomposition
 			d = zeros(height(c),width(b));
 			% resc = c_lhs - cc*c_rhs;
 			res = [cell2mat(xf);cell2mat(yiip)] ...
-				- [a b;c d]*ab_rhs;
+				- [a b;c d]*ab_rhs;  % Is there an error here? I am also calculating an error related to the evolution of the output
 			cost = sum(abs(res),'all');
 		end % function
 		function z_i = get_zi(obj, y_f, u_f, w_p)
@@ -146,7 +152,7 @@ classdef sidDecomposition < svdDecomposition
 				for step = 2 : n_points(orb)
 					% Lift the previous output
 					lft = [1 obsf(pred(orb).y(step-1,:))];
-					% Lifted output to state space
+					% Lifted output to lifted latent function space
 					x_prev = Ci*(lft');
 					% Evolve
 					x_post = obj.A*x_prev + obj.B*u{orb}(step,:)';
@@ -162,7 +168,7 @@ classdef sidDecomposition < svdDecomposition
 			obsrv = obj.obs.obs_function;
 			yev = arrayfun(@(sys) {[ones(size(sys.y,1),1) obsrv(sys.y)]}, data);
 			% extract the inputs into a cell
-			if ~isfield(data,'u')
+			if ~(isfield(data,'u')|all(isprop(data, 'u')))
 				u = [];
 			else
 				u = {data.u}';
@@ -194,7 +200,84 @@ classdef sidDecomposition < svdDecomposition
 			u_fp = cellfun(@(ui,xi){ui(1:obj.m,1:width(xi)-1)},u_f,x);
 			u_ff = cellfun(@(ui,xi){ui(1:obj.m,2:width(xi))},u_f,x);
 		end% Function
-	end
+    function filt = filter_lift(obj, data)
+      % filter takes a dateset and passes it through the prediction and
+      % filter.
+      % I alway
+      y0 = cell2mat(arrayfun(@(x){x.y(1,:)}, data));
+      % Extract the number of points per orbit
+      np = arrayfun(@(x) {size(x.y,1)}, data)';
+      if ~(isfield(data,'u')|isprop(data, 'u'))
+        % If the systems is aoutonomous
+        u = arrayfun(@(x){zeros(x,1)}, np);
+      else
+        u = {data.u};
+      end
+      % Preallocate
+      filt = cellfun(@(npi, ui) struct('sv', zeros(npi, obj.n), ...
+        'y', zeros(npi, obj.obs.l), ...
+        'u', ui), np, u)'; % carry the u just in case
+      obsf = obj.obs.obs_function; % extract the observables
+      Ci = pinv(obj.C);
+      % Simulate and filter
+      for orb = 1:size(y0,1)% For all the initial conditions
+        filt(orb).y(1,:) = y0(orb,:); % save the initial output
+        filt(orb).sv(1,:) = Ci*([1; obsf(filt(orb).y(1,:))']);
+        for step = 2:np{orb}
+          % Lift the previous output
+          % lft = [1 obsf(filt(orb).y(step-1,:))];
+          % evolve the latent state after 
+          x_post = obj.A*filt(orb).sv(step-1,:)' + obj.B*u{orb}(step,:)';
+          y_post = obj.C*x_post + obj.D*u{orb}(step,:)';
+          % update the state
+          y_diff = [1 obsf(data(orb).y(step,:))] - y_post';
+          filt(orb).sv(step,:) = (x_post + obj.K*y_diff')';
+          filt(orb).y(step,:) = obj.Cob*obj.C*filt(orb).sv(step,:)';
+        end
+      end% For
+    end% Function
+    function filt = filter_warm_up(obj, data, wrm_up)
+      % Uses a warmup quantity of steps before letting the sim go
+      y0 = cell2mat(arrayfun(@(x){x.y(1,:)}, data));
+      % Extract the number of points per orbit
+      np = arrayfun(@(x) {size(x.y,1)}, data)';
+      if ~(isfield(data,'u')|isprop(data, 'u'))
+        % If the systems is aoutonomous
+        u = arrayfun(@(x){zeros(x,1)}, np);
+      else
+        u = {data.u};
+      end
+      % Preallocate
+      filt = cellfun(@(npi, ui) struct('sv', zeros(npi, obj.n), ...
+        'y', zeros(npi, obj.obs.l), ...
+        'u', ui), np, u)'; % carry the u just in case
+      obsf = obj.obs.obs_function; % extract the observables
+      Ci = pinv(obj.C);
+      % Simulate and filter
+      for orb = 1:size(y0,1)% For all the initial conditions
+        filt(orb).y(1,:) = zeros(size(filt(orb).y(1,:))); % save the initial output
+        filt(orb).sv(1,:) = Ci*([1; obsf(filt(orb).y(1,:))']);
+        for step = 2:wrm_up
+          % Lift the previous output
+          % lft = [1 obsf(filt(orb).y(step-1,:))];
+          % evolve the latent state after 
+          x_post = obj.A*filt(orb).sv(step-1,:)' + obj.B*u{orb}(step,:)';
+          y_post = obj.C*x_post + obj.D*u{orb}(step,:)';
+          % update the state
+          y_diff = [1 obsf(data(orb).y(step,:))] - y_post';
+          filt(orb).sv(step,:) = (x_post + obj.K*y_diff')';
+          filt(orb).y(step,:) = obj.Cob*obj.C*filt(orb).sv(step,:)';
+        end
+        for step = wrm_up+1:np{orb}
+          % Lift the previous output
+          % lft = [1 obsf(filt(orb).y(step-1,:))];
+          % evolve the latent state after 
+          filt(orb).sv(step,:) = obj.A*filt(orb).sv(step-1,:)' + obj.B*u{orb}(step,:)';
+          filt(orb).y(step,:) = (obj.Cob*(obj.C*filt(orb).sv(step,:)' + obj.D*u{orb}(step,:)'))';
+        end
+      end% For
+    end% Function
+  end% Methods
 	methods (Static)
 		function zpox = zProjOx(z, x)
 			% zProjOx is the orthogonal projection of z onto the row pace

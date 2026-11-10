@@ -31,7 +31,7 @@ classdef pqDecomposition
 				
 				[obs_pst, obs_fut] = obj.y_snapshots(data);
 				
-				if isfield(data,'u')
+				if isfield(data,'u')|all(isprop(data, 'u'))
 					obj.m = size(data(1).u, 2);
 					[u_pst, u_fut] = obj.u_snapshots(data);
 					obs_pst = [obs_pst u_pst];
@@ -162,7 +162,7 @@ classdef pqDecomposition
 			np = arrayfun(@(x) size(x.y,1), data);
 			% preallocate
 			% I have to deal with the inputs. This was wrong....
-			if isfield(data, "u")
+			if isfield(data, "u")|all(isprop(data, "u"))
 				pred = obj.predict(y0, np, {data.u});
 			else
 				pred = obj.predict(y0, np);
@@ -176,7 +176,7 @@ classdef pqDecomposition
 			np = arrayfun(@(x) size(x.y,1), data);
 			% preallocate
 			% I have to deal with the inputs. This was wrong....
-			if isfield(data, "u")
+			if isfield(data, "u")|all(isprop(data,"u"))
 				pred = obj.predict_lift(y0, np, {data.u});
 			else
 				pred = obj.predict_lift(y0, np);

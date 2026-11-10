@@ -28,6 +28,7 @@ dcps = tas_pq.fit(exp(tr));
 % Get the best performing decomposition from the error of the testing set
 err = arrayfun(@(dcpi)dcpi.abs_error(exp(ts)),dcps);
 
+
 [er_bst, best] = min(err);
 dcp = dcps(best);
 

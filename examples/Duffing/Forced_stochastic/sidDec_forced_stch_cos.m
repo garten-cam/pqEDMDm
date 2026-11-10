@@ -1,7 +1,7 @@
 % Script for testing the Duffing equation, forced and deterministic with
 % the decomposition based on the singular value decomosition with
 % effectie rank
-clear variables
+% clear variables
 rng(1234)
 % call the script that simulates the experiments
 num_ics = 6;
